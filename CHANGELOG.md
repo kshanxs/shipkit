@@ -13,6 +13,10 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 
 ### Changed
 
+- kit-build: a Frame step first (the request, assumptions, success criteria as checks, the smallest change), test-first and surgical changes inside each step, and designing an unagreed feature with the user before code (2026-11-12)
+- Kits and the autopilot: an evidence rule; a step is done only with a command run in this session and what it printed, otherwise it is not verified (2026-11-12)
+- harden: fix the cause, one hypothesis at a time, and stop after three failed fixes for one flaw to report a design problem; bug-sweep: a suggested fix names the root cause and says when it is partial (2026-11-12)
+- switchboard: how shipkit works beside general method packs (superpowers, karpathy-guidelines), and which skill decides where they overlap (2026-11-12)
 - README: badges, navigation and Mermaid diagrams (the three skill groups, a feature end to end, how skills hand off, how the switchboard routes, what install.sh writes, shipkit.toml), a note on installing once for every project, and what CI checks (2026-11-11)
 
 ## [0.1.0] - 2026-11-11
