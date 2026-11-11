@@ -16,8 +16,9 @@ For each route under `prefix` whose path names a record (a parameter called `id`
     in every id field. B must not get a 2xx.
 
 A 2xx for B is printed as a CANDIDATE: read it; some routes are not about a tenant's records.
-Exit status 1 when there is a candidate. The target must be this machine unless allow_hosts names
-a test server. Never production. The config (generic SaaS example, references/sweep.example.toml):
+Exit status 1 when there is a candidate, 2 when the server cannot be reached (0 for --dry-run).
+--base-url overrides base_url, and an OpenAPI URL on the same server. The target must be this
+machine unless allow_hosts names a test server. Never production. The config (generic SaaS example, references/sweep.example.toml):
 
     openapi = "http://localhost:8000/openapi.json"   # or a file
     base_url = "http://localhost:8000"
@@ -48,6 +49,19 @@ ID_PARAM = re.compile(r"\{([A-Za-z_]*?(?:^id|_id|Id|ID)|id)\}")
 WRITES = ("post", "put", "patch", "delete")
 
 
+class Unreachable(Exception):
+    """The server at a URL did not answer: nothing is listening, or the name does not resolve."""
+
+    def __init__(self, url: str, reason: object) -> None:
+        super().__init__(f"cannot reach {url} ({reason})")
+        self.url = url
+
+
+def unreachable(error: BaseException) -> bool:
+    """A connection failure, as opposed to an HTTP status (HTTPError is a URLError too)."""
+    return isinstance(error, ConnectionError) or (isinstance(error, urllib.error.URLError) and not isinstance(error, urllib.error.HTTPError))
+
+
 def expand(value: str) -> str:
     """${VAR} and $VAR from the environment, so tokens stay out of the config file."""
     return os.path.expandvars(value)
@@ -64,8 +78,13 @@ def load_openapi(source: str, base: Path) -> dict:
         host = urlsplit(source).hostname or ""
         if host not in LOCAL_HOSTS:
             raise SystemExit(f"the OpenAPI document must come from this machine or a file, not {host}")
-        with urllib.request.urlopen(source, timeout=20) as response:
-            return json.loads(response.read())
+        try:
+            with urllib.request.urlopen(source, timeout=20) as response:
+                return json.loads(response.read())
+        except (urllib.error.URLError, ConnectionError) as error:
+            if unreachable(error):
+                raise Unreachable(source, getattr(error, "reason", error)) from None
+            raise
     path = Path(source) if Path(source).is_absolute() else base / source
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -154,6 +173,10 @@ def send(method: str, url: str, headers: dict, body: object | None) -> tuple[int
             return response.status, response.read(300).decode(errors="replace")
     except urllib.error.HTTPError as error:
         return error.code, error.read(300).decode(errors="replace")
+    except (urllib.error.URLError, ConnectionError) as error:
+        if unreachable(error):
+            raise Unreachable(url, getattr(error, "reason", error)) from None
+        return 0, type(error).__name__
     except Exception as error:
         return 0, type(error).__name__
 
@@ -164,15 +187,28 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--writes", action="store_true", help="also try every write as B (a scratch database only)")
     parser.add_argument("--only", help="only routes whose path matches this regular expression")
     parser.add_argument("--dry-run", action="store_true", help="print the requests; send nothing")
+    parser.add_argument("--base-url", help="the server to sweep, in place of base_url in the config")
     args = parser.parse_args(argv)
+    try:
+        return sweep(args)
+    except Unreachable as error:
+        print(f"isolation_sweep: {error}. Start the server, or pass --base-url to point at where it runs.")
+        return 0 if args.dry_run else 2
 
+
+def sweep(args: argparse.Namespace) -> int:
     config_path = Path(args.config).resolve()
     cfg = load_config(config_path)
     base_url = cfg.get("base_url", "http://localhost:8000").rstrip("/")
+    openapi = cfg.get("openapi", f"{base_url}/openapi.json")
+    if args.base_url:
+        if openapi.startswith(base_url + "/"):
+            openapi = args.base_url.rstrip("/") + openapi[len(base_url) :]
+        base_url = args.base_url.rstrip("/")
     host = urlsplit(base_url).hostname or ""
     if host not in LOCAL_HOSTS | set(cfg.get("allow_hosts", [])):
         raise SystemExit(f"{host} is not this machine; add it to allow_hosts only for a test server, never production")
-    spec = load_openapi(cfg.get("openapi", f"{base_url}/openapi.json"), config_path.parent)
+    spec = load_openapi(openapi, config_path.parent)
     ids = {k: str(v) for k, v in cfg.get("ids", {}).items()}
     header = cfg.get("tenant_header", "")
     sides = {}

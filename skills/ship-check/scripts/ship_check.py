@@ -11,8 +11,9 @@ The checklist is `ship-check.toml` at the project root, or the path in `[ship_ch
 shipkit.toml; without one, the skill's references/checklist.example.toml (generic SaaS) is used.
 Status words: DONE, PARTIAL, MISSING, UNKNOWN (never guessed). Capabilities: PRESENT, PARTIAL,
 MISSING, UNKNOWN. `check` exits 1 when a row's status is not one of the words, a DONE, PARTIAL or
-PRESENT row cites no path, a cited path does not exist, the head SHA is missing, or the report has
-no top-five list.
+PRESENT row cites no path, a cited path does not exist or is an installed skill, the head SHA (or
+"no commits yet") is missing, or the report has no top-five list. Installed skill folders (.claude/,
+.agents/, .trae/, and any folder shipkit installed) are never project evidence.
 """
 
 from __future__ import annotations
@@ -32,6 +33,8 @@ STATUS = ("DONE", "PARTIAL", "MISSING", "UNKNOWN")
 CAPABILITY = ("PRESENT", "PARTIAL", "MISSING", "UNKNOWN")
 NEEDS_EVIDENCE = {"DONE", "PARTIAL", "PRESENT"}
 PRUNE = {".git", "node_modules", ".venv", "venv", "dist", "build", "__pycache__", ".next", ".expo", "coverage"}
+INSTALLED = {".claude", ".agents", ".trae"}  # agents' skill folders: what shipkit installs, not the project
+NO_COMMITS = "no commits yet"
 
 
 def project_root() -> Path:
@@ -64,13 +67,20 @@ def git(*args: str) -> str:
     return done.stdout.strip() if done.returncode == 0 else ""
 
 
+def installed(rel: Path) -> bool:
+    """A path inside an agent's skill folder, or inside a folder shipkit installed (it holds a .shipkit file)."""
+    if any(part in INSTALLED for part in rel.parts):
+        return True
+    return any((ROOT.joinpath(*rel.parts[:end]) / ".shipkit").is_file() for end in range(1, len(rel.parts) + 1))
+
+
 def matches(patterns: list[str], limit: int = 6) -> list[str]:
     """Files under the root matching any glob, nearest first, at most `limit`."""
     found: list[str] = []
     for pattern in patterns:
         for path in sorted(ROOT.glob(pattern)):
             rel = path.relative_to(ROOT)
-            if any(part in PRUNE for part in rel.parts):
+            if any(part in PRUNE for part in rel.parts) or installed(rel):
                 continue
             name = rel.as_posix() + ("/" if path.is_dir() else "")
             if name not in found:
@@ -86,15 +96,21 @@ def hint_text(patterns: list[str]) -> str:
 
 
 def scaffold(cfg: dict) -> str:
-    sha = git("rev-parse", "HEAD") or "unknown (not a git checkout)"
-    branch = git("rev-parse", "--abbrev-ref", "HEAD") or "unknown"
+    sha = git("rev-parse", "--verify", "--quiet", "HEAD")
+    branch = git("rev-parse", "--abbrev-ref", "HEAD") or git("symbolic-ref", "--short", "HEAD") or "unknown"
+    if sha:
+        audited = f"`{branch}` at `{sha}`"
+    elif git("rev-parse", "--git-dir"):
+        audited = f"`{branch}`, {NO_COMMITS},"
+    else:
+        audited = "`unknown` at `unknown (not a git checkout)`"
     deploy = cfg.get("target", {}).get("deploy_branch", "main")
     product = cfg.get("product", {}).get("name", ROOT.name)
     behind = git("rev-list", "--count", f"{deploy}..HEAD") if git("rev-parse", "--verify", "--quiet", deploy) else ""
     lines = [
         f"# Launch readiness: {product}",
         "",
-        f"Audited: `{branch}` at `{sha}` on {date.today().isoformat()}. "
+        f"Audited: {audited} on {date.today().isoformat()}. "
         + (f"{behind} commits on this branch are not on `{deploy}` yet." if behind else f"Compare with `{deploy}` by hand: which fixes are not deployed yet."),
         "",
         "Read-only audit. Every claim cites a path (with a line where there is one); what could not be verified is UNKNOWN.",
@@ -163,8 +179,8 @@ CITED = re.compile(r"`([^`\s]+?)(?::\d+(?:-\d+)?)?`")
 def check(report: Path) -> list[str]:
     text = report.read_text(encoding="utf-8")
     problems = []
-    if not re.search(r"`[0-9a-f]{7,40}`", text):
-        problems.append("the head SHA audited is not written at the top (`<sha>`)")
+    if not re.search(r"`[0-9a-f]{7,40}`", text) and NO_COMMITS not in text.split("\n## ", 1)[0]:
+        problems.append(f"the head SHA audited is not written at the top (`<sha>`, or \"{NO_COMMITS}\")")
     if "## Top 5 before launch" not in text:
         problems.append("no `## Top 5 before launch` section")
     section = ""
@@ -188,6 +204,8 @@ def check(report: Path) -> list[str]:
         for path in cited:
             if not (ROOT / path.rstrip("/")).exists():
                 problems.append(f"{report.name}:{number}: {found.group(1)} cites `{path}`, which does not exist")
+            elif installed(Path(path.rstrip("/"))):
+                problems.append(f"{report.name}:{number}: {found.group(1)} cites `{path}`, an installed skill, not project evidence")
     return problems
 
 

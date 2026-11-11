@@ -96,6 +96,16 @@ class FeatureTree(unittest.TestCase):
         self.assertEqual(result.returncode, 1, result.stdout)
         return result.stdout
 
+    def test_a_fresh_project_with_no_catalog_skips_with_one_line(self) -> None:
+        (self.root / "docs/feature_catalog.md").unlink()
+        for args in ((), ("--list",), ("--write",)):
+            result = self.run_script(*args)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(result.stderr, "")
+            self.assertEqual(len(result.stdout.splitlines()), 1, result.stdout)
+            self.assertIn("docs/feature_catalog.md does not exist yet; nothing to check", result.stdout)
+        self.assertFalse((self.root / "docs/feature_catalog.md").exists())
+
     def test_passes_and_counts_features_by_what_is_left(self) -> None:
         result = self.run_script()
         self.assertEqual(result.returncode, 0, result.stdout)

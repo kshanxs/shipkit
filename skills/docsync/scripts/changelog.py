@@ -342,6 +342,9 @@ def main() -> int:
     checking.add_argument("logs", nargs="*")
 
     args = parser.parse_args()
+    if not logs(ROOT):
+        print("changelog: no CHANGELOG.md yet (at the root or in a package); nothing to do. Create one to start the log.")
+        return 0
     try:
         if args.command == "add":
             (log,) = chosen([args.log], ROOT).values()

@@ -42,8 +42,8 @@ class Api(BaseHTTPRequestHandler):
         self.rfile.read(length)
         tenant = self.headers.get("X-Workspace-ID")
         leaky = self.path.startswith("/api/v1/invoices/")
-        status = 200 if (tenant == "1" or leaky) else 404
-        body = json.dumps({"ok": status == 200}).encode()
+        status = 200 if (tenant == "1" or leaky or self.path == "/openapi.json") else 404
+        body = json.dumps(OPENAPI if self.path == "/openapi.json" else {"ok": status == 200}).encode()
         self.send_response(status)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
@@ -113,6 +113,37 @@ class Sweep(unittest.TestCase):
         self.config.write_text(self.config.read_text().replace('task_id = "301"\n', ""))
         code, out = self.cli("--dry-run")
         self.assertIn("no id for task_id", out)
+
+    def test_no_server_is_a_clear_message_not_a_traceback(self) -> None:
+        url = f"http://127.0.0.1:{self.port}"
+        self.config.write_text(self.config.read_text().replace('openapi = "openapi.json"', f'openapi = "{url}/openapi.json"'))
+        code, out = self.cli("--dry-run")
+        self.assertEqual(code, 0, out)
+        self.assertIn(f"cannot reach {url}/openapi.json", out)
+        self.assertIn("Start the server, or pass --base-url", out)
+        self.assertNotIn("Traceback", out)
+        code, out = self.cli()
+        self.assertEqual(code, 2, out)
+        self.assertIn(f"cannot reach {url}/openapi.json", out)
+
+    def test_no_server_on_a_real_run_with_a_file_spec_stops_at_the_first_request(self) -> None:
+        code, out = self.cli()
+        self.assertEqual(code, 2, out)
+        self.assertIn(f"cannot reach http://127.0.0.1:{self.port}/api/v1/", out)
+        self.assertIn("pass --base-url", out)
+        self.assertNotIn("ctrl", out)
+
+    def test_base_url_points_the_sweep_and_the_openapi_url_at_another_port(self) -> None:
+        down = free_port()
+        self.config.write_text(
+            self.config.read_text()
+            .replace(f"127.0.0.1:{self.port}", f"127.0.0.1:{down}")
+            .replace('openapi = "openapi.json"', f'openapi = "http://127.0.0.1:{down}/openapi.json"')
+        )
+        with self.api():
+            code, out = self.cli("--base-url", f"http://127.0.0.1:{self.port}")
+        self.assertIn("1 candidates", out)
+        self.assertEqual(code, 1, out)
 
     def test_a_remote_target_is_refused(self) -> None:
         self.config.write_text(self.config.read_text().replace(f"http://127.0.0.1:{self.port}", "https://api.example.com"))
