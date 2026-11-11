@@ -1,0 +1,60 @@
+# Kits: one command that runs a group of skills in order, skipping the steps that do not apply now.
+#
+# kit.py (beside this file, in scripts/) reads this table:
+#   kit.py plan <kit> [--tier quick|full|launch] [--mode start|end] [--request "..."]
+#       each step: run, skip (does not apply, and why) or blocked (applies, but cannot run now,
+#       and what to do about it), decided from the repository's state
+#   kit.py auto [--request "..."]     the kits and skills that fit right now (the autopilot skill)
+#   kit.py members <skill>            the skills a kit or the autopilot needs (install.sh --skills)
+#
+# Fields of a step
+#   skill   the skill that does the step
+#   do      what it does in this kit (one line)
+#   when    the condition kit.py checks (see CONDITIONS in kit.py)
+#   tier    break only: the lowest tier that runs it (quick < full < launch); default quick
+#   mode    flow only: "start" (session start) or "end" (session end); default end
+#
+# A kit's own skill (kit-build, ...) is the playbook an agent follows; this file is what it runs.
+
+[build]
+skill = "kit-build"
+title = "Build a feature"
+steps = [
+  { skill = "handoff", do = "read Now, Next up, Waiting and the newest work log rows", when = "handoff_file" },
+  { skill = "open-loops", do = "the open questions this work touches; build around the undecided ones", when = "open_loops_register" },
+  { skill = "fanout", do = "split the work into tasks that share no files, one agent per worktree", when = "parallel" },
+  { skill = "stack-backend", do = "build the API part; its tests must pass before the next step", when = "scope_api" },
+  { skill = "stack-web", do = "build the web part; its checks must pass before the next step", when = "scope_web" },
+  { skill = "stack-native", do = "build the mobile part; its checks must pass before the next step", when = "scope_native" },
+  { skill = "wire-api", do = "connect the screens to the endpoints; typed client, query keys, tracker status", when = "scope_wire" },
+  { skill = "seedbed", do = "seed data for what changed, so a fresh database, the demo and the tests show it", when = "scope_seed" },
+]
+
+[break]
+skill = "kit-break"
+title = "Prove it: test first, break it, report"
+steps = [
+  { skill = "harden", do = "test first, then break the changed areas; every flaw a failing test, then the fix", when = "code_changes" },
+  { skill = "bug-sweep", do = "review the new commits (full: and sweep one area); verify before reporting", when = "sweep_target" },
+  { skill = "load-sim", do = "many tenants' real usage on the local stack; thresholds pass or fail", when = "load_ready", tier = "full" },
+  { skill = "perf-watch", do = "collect latency, slow queries, pool, CPU and memory while load-sim runs", when = "load_ready", tier = "full" },
+  { skill = "ship-check", do = "read-only launch-readiness audit; blockers and the top five", when = "always", tier = "launch" },
+  { skill = "triage-report", do = "one severity-ranked report of everything above", when = "report_due" },
+]
+
+[flow]
+skill = "kit-flow"
+title = "Close the loop (or open the session)"
+steps = [
+  { skill = "handoff", do = "read where the last session left off", when = "handoff_file", mode = "start" },
+  { skill = "open-loops", do = "the questions waiting on the owner", when = "open_loops_register", mode = "start" },
+  { skill = "docsync", do = "changelogs, specs and the tracker for this change; check_docs.py --changed", when = "docs_present" },
+  { skill = "feature-map", do = "move what was built; recount; keep the pricing page in step", when = "feature_catalog" },
+  { skill = "open-loops", do = "update the questions this change touched (open_loops.py --changed)", when = "open_loops_register" },
+  { skill = "handoff", do = "one work log row; update Now, Next up, Waiting and Blocked", when = "handoff_end" },
+]
+
+[feature]
+skill = "kit-feature"
+title = "A feature end to end: build, break, close the loop"
+kits = ["build", "break", "flow"]

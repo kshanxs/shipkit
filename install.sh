@@ -62,6 +62,14 @@ if [ -n "$ONLY" ]; then
   for s in $SKILLS; do
     printf '%s\n' "$ALL" | grep -qx "$s" || { echo "install.sh: no skill named $s; there are: $(echo $ALL)" >&2; exit 1; }
   done
+  # A kit (kit-*) or the autopilot brings the skills it runs (switchboard/kits.toml).
+  for s in $SKILLS; do
+    case "$s" in
+      kit-*|autopilot) SKILLS="$SKILLS
+$(python3 "$SRC/switchboard/scripts/kit.py" members "$s")" ;;
+    esac
+  done
+  SKILLS=$(printf '%s\n' "$SKILLS" | sed '/^$/d' | awk '!seen[$0]++')
   printf '%s\n' "$SKILLS" | grep -qx switchboard || SKILLS="$SKILLS
 switchboard"
 else

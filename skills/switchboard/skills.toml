@@ -216,3 +216,51 @@ triggers = [
   '\bslash commands?\b|\bskill router\b|\bswitchboard\b',
 ]
 paths = ["**/switchboard/**"]
+
+# ── Kits ──────────────────────────────────────────────────────────────────────
+# A kit runs a group's skills in order, skipping what does not apply now (kits.toml, scripts/kit.py).
+# Named (/break, @flow), a kit comes alone: it picks its own skills.
+
+[kit-build]
+short = ["build"]
+summary = "The Build group in one command: handoff and open-loops, fanout when parallel, only the stack skills the work touches, wire-api, seedbed"
+triggers = [
+  '\bbuild kit\b|\brun (the )?build (kit|skills|group)\b',
+  '\bbuild (it|this) with ship ?kit\b',
+]
+
+[kit-break]
+short = ["break", "bt"]
+summary = "The Break & Test group in one command: harden, bug-sweep, (full) load-sim with perf-watch, (launch) ship-check, one triage report"
+triggers = [
+  '\bbreak (and|&) test\b',
+  '\b(run|do) (all|every|the whole)( of)? (the )?(break|test(ing)?) (skills|kit|group)\b',
+  '\bprove (it|this|the change)\b|\btest everything\b',
+]
+
+[kit-flow]
+short = ["flow"]
+summary = "The Docs & Flow group in one command: docsync, feature-map, open-loops, a handoff log row; /flow start reads where we left off"
+triggers = [
+  '\bwrap(ping)? up\b|\bclose (out|the loop)\b',
+  '\bend of (the )?(day|session)\b',
+  '\b(docs|flow) kit\b|\brun (the )?(docs|flow) (kit|skills|group)\b',
+]
+
+[kit-feature]
+short = ["feature"]
+summary = "A feature end to end: the Build kit, then Break & Test (quick), then Docs & Flow, stopping at a failing gate"
+triggers = [
+  '\b(build|do|ship) (it|this|the feature) end[- ]to[- ]end\b|\bend[- ]to[- ]end feature\b',
+  '\bbuild, test,? and document\b|\bfeature kit\b',
+]
+
+[autopilot]
+short = ["shipkit", "auto"]
+summary = "Decides which shipkit kits and skills fit right now from the repository's state, runs them, and says what cannot run yet and why"
+triggers = [
+  '\b(run|use|apply) (the )?ship ?kit\b',
+  '\bship ?kit (skills|autopilot)\b',
+  '\bwhat (skills? )?should (i|we) run\b',
+  '\bautopilot\b',
+]

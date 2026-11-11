@@ -13,6 +13,10 @@ that failed before the fix.
   command and what it printed are.
 - **A flaw is a failing test first.** Write the test that shows it, watch it fail, fix the cause,
   watch it pass, keep it. A test that has never failed has not shown it can catch anything.
+- **Fix the cause, not the symptom.** Before a fix, say why the flaw happens (the line, the
+  missing constraint, the shared state) and test one hypothesis at a time. If three fixes for the
+  same flaw have failed, stop patching: report it as a design problem (what keeps breaking, where)
+  and ask before a fourth attempt.
 
 `$SK` is the skills folder this skill is installed in. Works with stack-backend (how the API is
 built and tested), docsync (a flaw found is a bug: its number, its register row, its changelog
