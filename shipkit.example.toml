@@ -1,8 +1,21 @@
-# shipkit.toml: one config for every shipkit skill. Generic SaaS example.
+# shipkit.toml: one config for every shipkit skill. The generic multi-tenant SaaS preset.
 #
-# install.sh copies this to the project root when the project has none. Every key is optional:
-# a missing table means the defaults, and a check whose files do not exist is skipped. Edit the
-# paths to match your repository; each skill's references/config.md (or SKILL.md) explains its table.
+# install.sh does NOT copy this by default: it writes a shipkit.toml from what the project is
+# (`project.py write`), and the profile skill (/profile) checks it. This file is the preset for a
+# hosted multi-tenant SaaS with billing and priced plans (`install.sh --preset saas`), and a
+# reference for every table. Every key is optional: a missing table means the defaults, and a check
+# whose files do not exist is skipped. Each skill's references/config.md (or SKILL.md) explains its table.
+
+# What kind of project this is. Skills, checklists and kits run only the parts that fit it
+# (`python3 <skills>/switchboard/scripts/project.py --help` lists the values and traits).
+[project]
+kind = "saas"                   # saas | self-hosted | app | cli | library | infra | container-app
+tenancy = "multi-tenant"        # none | single-user | multi-user | multi-tenant
+money = "payments"              # none | payments
+plans = "tiers"                 # none | tiers (priced plans)
+auth = "accounts"               # none | local | accounts
+surfaces = ["api", "web", "native"]   # api, web, native, cli, shell, container, library
+offline = true                  # works offline and syncs later
 
 # Where the code is, so the stack skills look in the right place.
 [stack]

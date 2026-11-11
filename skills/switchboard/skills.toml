@@ -217,6 +217,16 @@ triggers = [
 ]
 paths = ["**/switchboard/**"]
 
+[profile]
+short = ["profile", "configure"]
+summary = "Fills in shipkit.toml from the project: what kind it is (tenants, money, plans, surfaces) and where its code is, so every skill runs only what fits"
+triggers = [
+  '\b(set ?up|configure|init(iali[sz]e)?) ship ?kit\b',
+  '\bship ?kit\.toml\b|\bfill (in )?the (ship ?kit )?(toml|config)\b',
+  '\bproject profile\b|\bwhat kind of project\b',
+]
+paths = ["shipkit.toml"]
+
 # ── Kits ──────────────────────────────────────────────────────────────────────
 # A kit runs a group's skills in order, skipping what does not apply now (kits.toml, scripts/kit.py).
 # Named (/break, @flow), a kit comes alone: it picks its own skills.

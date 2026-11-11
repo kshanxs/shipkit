@@ -8,6 +8,7 @@ Standard library only (Python 3.11+).
     kit.py plan feature [--request "..."]                    build, then break (quick), then flow (end)
     kit.py auto         [--request "..."]                    what fits right now: the autopilot
     kit.py facts                                             what the plans are decided from
+    kit.py profile                                           the project profile the steps are held to (project.py show)
     kit.py members kit-break                                 the skills a kit needs (for install.sh --skills)
     --json                                                   machine-readable output (plan, auto, facts)
 
@@ -18,7 +19,9 @@ Every step comes out as one of:
 
 The kits are in ../kits.toml. Everything is decided from the repository: what changed against the
 default branch (and in the working tree), which stacks shipkit.toml names, which registers exist,
-whether the load target in load-scenario.toml is this machine and answers. Nothing is changed and
+whether the load target in load-scenario.toml is this machine and answers, and the project profile
+([project] in shipkit.toml, else detected: project.py): a step whose `needs` the profile lacks is
+skipped, so a project with no tenants never gets a many-tenant load test. Nothing is changed and
 nothing but a local TCP connect is sent anywhere.
 """
 
@@ -36,6 +39,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import project  # noqa: E402
 import route  # noqa: E402
 
 KITS_FILE = route.SKILL / "kits.toml"
@@ -74,6 +78,7 @@ class Facts:
     installed: set[str] = field(default_factory=set)
     routed: list[str] = field(default_factory=list)  # what the switchboard picks for the request
     load: dict = field(default_factory=dict)
+    profile: project.Profile | None = None
 
     # derived
     @property
@@ -97,7 +102,7 @@ class Facts:
 
     def touches(self, stack: str) -> list[str]:
         dirs = self.stacks.get(stack) or []
-        dirs = [dirs] if isinstance(dirs, str) else dirs
+        dirs = [d for d in ([dirs] if isinstance(dirs, str) else dirs) if d]
         out = []
         for d in dirs:
             d = d.rstrip("/")
@@ -106,7 +111,7 @@ class Facts:
 
     def stack_exists(self, stack: str) -> bool:
         dirs = self.stacks.get(stack) or []
-        dirs = [dirs] if isinstance(dirs, str) else dirs
+        dirs = [d for d in ([dirs] if isinstance(dirs, str) else dirs) if d]
         return any((self.root / d).is_dir() for d in dirs if "*" not in d) or any(
             any(self.root.glob(d)) for d in dirs if "*" in d
         )
@@ -163,24 +168,34 @@ def gather(root: Path | None = None, request: str = "") -> Facts:
         except tomllib.TOMLDecodeError:
             f.config = {}
     stack = f.config.get("stack", {})
-    f.stacks = {
-        "api": stack.get("api_dir", "apps/api"),
-        "web": stack.get("web_dirs", ["apps/web"]),
-        "native": stack.get("native_dir", "apps/mobile"),
-    }
+    keys = {"api": "api_dir", "web": "web_dirs", "native": "native_dir"}
+    project_keys = ("kind", "tenancy", "money", "plans", "auth", "surfaces", "offline")
+    complete = all(k in stack for k in keys.values()) and all(k in f.config.get("project", {}) for k in project_keys)
+    detected = None if complete else project.detect(root)  # only what shipkit.toml leaves out is detected
+    f.stacks = {s: stack.get(k, detected.stack[k] if detected else "") for s, k in keys.items()}
+    f.profile = project.profile(root, f.config, detected)
     f.installed = route.installed()
     if request.strip():
         f.routed = [p.skill.name for p in route.route(request, route.load())]
     f.git = git(root, "rev-parse", "--is-inside-work-tree") == "true"
     if f.git:
         status = git(root, "status", "--porcelain", "--untracked-files=all") or ""
-        f.uncommitted = [line[3:].split(" -> ")[-1].strip('"') for line in status.splitlines() if line.strip()]
+        # git() strips the output, which eats the first line's leading status space: parse, do not slice
+        f.uncommitted = [
+            m.group(1).split(" -> ")[-1].strip('"') for line in status.splitlines() if (m := re.match(r"^.{1,2}\s+(.+)$", line))
+        ]
         f.base = base_ref(root)
         committed: list[str] = []
         if f.base:
             f.ahead = int(git(root, "rev-list", "--count", f"{f.base}..HEAD") or 0)
             committed = (git(root, "diff", "--name-only", f"{f.base}...HEAD") or "").splitlines()
-        f.changed = sorted(set(committed) | set(f.uncommitted))
+        # the installed skills and commands are shipkit's files, not the project's work
+        ours = (".claude/skills/", ".agents/skills/", ".trae/skills/", ".claude/commands/")
+        def project_file(p: str) -> bool:
+            return not p.startswith(ours) and p != "shipkit.toml"
+
+        f.uncommitted = [p for p in f.uncommitted if project_file(p)]
+        f.changed = sorted(p for p in set(committed) | set(f.uncommitted) if project_file(p))
     f.load = load_target(root)
     return f
 
@@ -342,6 +357,12 @@ def plan(name: str, f: Facts, tier: str = "quick", mode: str = "end") -> list[St
         if s["skill"] not in f.installed:
             steps.append(Step(name, s["skill"], s["do"], SKIP, f"not installed (install.sh --skills {s['skill']})"))
             continue
+        lacks = f.profile.missing(*s.get("needs", [])) if f.profile else []
+        if lacks:
+            where = "[project] in shipkit.toml" if f.profile.configured else "detected; /profile records it"
+            why = f"the project is not {', '.join(lacks)} ({where})"
+            steps.append(Step(name, s["skill"], s["do"], SKIP, why))
+            continue
         state, reason = CONDITIONS[s["when"]](f, tier=tier, mode=mode)
         steps.append(Step(name, s["skill"], s["do"], state, reason))
     for step in steps:
@@ -362,11 +383,14 @@ class Advice:
     now: list[dict] = field(default_factory=list)  # {"run": "/break", "why": ...}
     available: list[dict] = field(default_factory=list)
     not_now: list[dict] = field(default_factory=list)
+    profile: str = ""
 
 
 def advise(f: Facts) -> Advice:
     a = Advice()
     req = f.request.strip()
+    if f.profile:
+        a.profile = f.profile.line()
     # naming the autopilot itself means "decide": it never answers with itself
     named = [p for p in route.route(req, route.load()) if p.named and p.skill.name != "autopilot"] if req else []
     if named:
@@ -394,8 +418,14 @@ def advise(f: Facts) -> Advice:
             if routed:
                 a.now.append({"run": f"/{routed[0].skill.short[0]}", "why": f"the request fits {routed[0].skill.name}"})
 
+    if f.profile and not f.profile.configured:
+        a.now.insert(0, {"run": "/profile", "why": f"shipkit.toml has no [project]: confirm what was detected ({f.profile.line().split('  (')[0]}) and record it"})
+
     load = cond_load_ready(f)
-    if load[0] == RUN:
+    if f.profile and not f.profile.has("multi-tenant"):
+        users = {"none": "has no users", "single-user": "is single-user", "multi-user": "has users but no tenants"}
+        a.not_now.append({"run": "/break full", "why": f"load-sim simulates many tenants; this project {users.get(str(f.profile.get('tenancy')), 'is not multi-tenant')}"})
+    elif load[0] == RUN:
         a.available.append({"run": "/break full", "why": f"{load[1]}: load-sim and perf-watch can run"})
     elif f.load.get("scenario"):
         a.not_now.append({"run": "/break full", "why": load[1]})
@@ -429,7 +459,7 @@ def show_plan(name: str, steps: list[Step], tier: str, mode: str) -> str:
 
 
 def show_advice(a: Advice) -> str:
-    out = ["Now:"]
+    out = ([f"Profile: {a.profile}", ""] if a.profile else []) + ["Now:"]
     out += [f"  {x['run']:<14} {x['why']}" for x in a.now]
     if a.available:
         out += ["", "Ready when you want:"] + [f"  {x['run']:<14} {x['why']}" for x in a.available]
@@ -449,7 +479,7 @@ def members(skill: str) -> list[str]:
         return [s["skill"] for s in k["steps"]]
 
     if skill == "autopilot":
-        out = [v["skill"] for v in table.values()] + [m for k in table for m in of(k)]
+        out = [v["skill"] for v in table.values()] + [m for k in table for m in of(k)] + ["profile"]
     elif skill in by_skill:
         out = of(by_skill[skill])
     else:
@@ -495,9 +525,12 @@ def main(argv: list[str]) -> int:
             "root": str(f.root), "git": f.git, "base": f.base, "ahead": f.ahead,
             "code_changed": f.code_changed, "docs_changed": f.docs_changed, "schema_changed": f.schema_changed,
             "uncommitted": f.uncommitted, "routed": f.routed, "load": f.load, "installed": sorted(f.installed),
+            "stacks": f.stacks, "profile": sorted(f.profile.traits) if f.profile else [],
         }  # fmt: skip
         print(json.dumps(data, indent=2))
         return 0
+    if cmd == "profile":
+        return project.main(["show", "--root", str(f.root)] + (["--json"] if as_json else []))
     if cmd == "plan":
         name = argv[1] if len(argv) > 1 else ""
         steps = plan(name, f, tier=tier, mode=mode)

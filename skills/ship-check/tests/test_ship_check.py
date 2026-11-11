@@ -10,6 +10,18 @@ import unittest
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "ship_check.py"
+PROFILE = """[project]
+kind = "{kind}"
+tenancy = "{tenancy}"
+money = "{money}"
+plans = "{plans}"
+auth = "{auth}"
+surfaces = {surfaces}
+offline = false
+"""
+SAAS = PROFILE.format(kind="saas", tenancy="multi-tenant", money="payments", plans="tiers", auth="accounts", surfaces='["api", "web"]')
+SELF_HOSTED = PROFILE.format(kind="self-hosted", tenancy="single-user", money="none", plans="none", auth="local", surfaces='["api", "web", "container"]')
+LIBRARY = PROFILE.format(kind="library", tenancy="none", money="none", plans="none", auth="none", surfaces='["library"]')
 
 
 class ShipCheck(unittest.TestCase):
@@ -21,6 +33,7 @@ class ShipCheck(unittest.TestCase):
             "app/rate_limit.py": "LIMIT = 100\n",
             ".github/workflows/ci.yml": "on: push\n",
             "docs/testing/bug_report.md": "# Bugs\n",
+            "shipkit.toml": SAAS,
         }.items():
             target = self.root / path
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -130,9 +143,40 @@ class ShipCheck(unittest.TestCase):
     def test_init_copies_the_checklist_and_scaffold_uses_it(self) -> None:
         self.assertEqual(self.run_script("init").returncode, 0)
         path = self.root / "ship-check.toml"
-        path.write_text(path.read_text().replace('name = "Example SaaS"', 'name = "Widget Cloud"'))
+        path.write_text(path.read_text().replace('name = "" ', 'name = "Widget Cloud" '))
         self.assertIn("# Launch readiness: Widget Cloud", self.scaffold())
 
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Profiles(ShipCheck):
+    """The checklist keeps only what the project profile needs, and says what it left out."""
+
+    def test_a_self_hosted_app_gets_no_billing_tenants_or_pricing(self) -> None:
+        (self.root / "shipkit.toml").write_text(SELF_HOSTED)
+        text = self.scaffold()
+        for absent in ("Billing operations", "Choosing a plan and paying", "Tenant isolation", "## 4. Pricing", "Sign-up and email verification"):
+            self.assertNotIn(f"| {absent}", text.replace("## 4. Pricing", "| ## 4. Pricing"))
+        self.assertNotIn("## 4. Pricing", text)
+        for present in ("DNS rebinding refused", "Cross-site requests refused", "Install and first run", "Data safety for self-hosted users"):
+            self.assertIn(present, text)
+        self.assertIn("Left out, not in this project's profile:", text)
+        self.assertIn("Billing operations (refunds, credits, plan changes) (needs money)", text)
+
+    def test_a_saas_keeps_everything_hosted_and_drops_self_hosted_items(self) -> None:
+        text = self.scaffold()
+        for present in ("Billing operations", "Tenant isolation", "## 4. Pricing", "Sign-up and email verification"):
+            self.assertIn(present, text)
+        self.assertNotIn("| DNS rebinding refused", text)
+        self.assertNotIn("### Releases and distribution", text)
+
+    def test_a_library_gets_releases_not_operations(self) -> None:
+        (self.root / "shipkit.toml").write_text(LIBRARY)
+        text = self.scaffold()
+        self.assertIn("### Releases and distribution", text)
+        self.assertIn("Install and the first import", text)
+        for absent in ("### Operations", "### Observability", "| Rate limiting", "| Uptime and health"):
+            self.assertNotIn(absent, text)
+        self.assertEqual(self.run_script("check", "report.md").returncode, 0)

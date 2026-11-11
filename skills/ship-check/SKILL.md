@@ -11,12 +11,16 @@ owner picks what goes to the builder. `$SK` is the skills folder this skill is i
 ## The checklist
 
 What the audit covers is configuration, not this file: `ship-check.toml` at the project root (or
-the path in `[ship_check] checklist` of `shipkit.toml`); without one, the generic SaaS checklist in
-[references/checklist.example.toml](references/checklist.example.toml) is used.
+the path in `[ship_check] checklist` of `shipkit.toml`); without one,
+[references/checklist.example.toml](references/checklist.example.toml) is used. It covers hosted
+SaaS, self-hosted servers, CLIs, libraries and machine-changing scripts: each group or item with
+`requires = [...]` is kept only when the project profile has those traits (`project.py show`), so a
+self-hosted tool is never asked about billing operations or tenant isolation, and a library is
+never asked about backups. The scaffold names what it left out.
 
 ```bash
 C="python3 $SK/ship-check/scripts/ship_check.py"
-$C init                                   # copy the generic SaaS checklist to ship-check.toml, then make it yours
+$C init                                   # copy the checklist to ship-check.toml, then make it yours
 $C scaffold --out ship-check-report.md    # the report's skeleton: every item UNKNOWN, with files to read for each
 $C check ship-check-report.md             # every status a word, every DONE/PARTIAL/PRESENT a real path, the SHA, the top five
 ```
@@ -40,14 +44,14 @@ and flag the stale document.
 
 ## 2. The report
 
-1. **Operator capabilities** (support, audited support access, uptime and health, configuration and
-   feature flags, suspend or offboard, billing operations, audit): PRESENT, PARTIAL or MISSING, with
-   a path.
+1. **Operator capabilities** (those the profile keeps: support, audited support access, uptime and
+   health, configuration and feature flags, suspend or offboard, billing operations, audit):
+   PRESENT, PARTIAL or MISSING, with a path.
 2. **Onboarding flows**, in the order a customer meets them, plus developer and test accounts:
    compare each with common practice and name each gap.
 3. **Status checklist**: each item DONE, PARTIAL, MISSING or UNKNOWN, one line of evidence and a
    path, grouped as the checklist groups them.
-4. **Pricing**: exact values with paths (plans, per-seat or usage prices, minimums, tiers, tax,
+4. **Pricing** (priced plans only; the scaffold leaves it out otherwise): exact values with paths (plans, per-seat or usage prices, minimums, tiers, tax,
    trial and grace days, provider fees, unit economics). Flag stale documents.
 5. **Bugs and risks**: open bugs and in-flight pull requests; then a numbered list of **launch
    blockers**, then other risks, then unknowns.

@@ -60,14 +60,14 @@ class Install(unittest.TestCase):
         result = install(self.target, "--agents", "--skills", "docsync,harden")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         names = sorted(p.parent.name for p in (self.target / ".agents/skills").glob("*/SKILL.md"))
-        self.assertEqual(names, ["docsync", "harden", "switchboard"])
+        self.assertEqual(names, ["docsync", "harden", "profile", "switchboard"])
         self.assertFalse((self.target / ".claude").exists())
 
     def test_a_kit_brings_the_skills_it_runs(self) -> None:
         result = install(self.target, "--claude", "--skills", "kit-break")
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         names = sorted(p.parent.name for p in (self.target / ".claude/skills").glob("*/SKILL.md"))
-        self.assertEqual(names, ["bug-sweep", "docsync", "harden", "kit-break", "load-sim", "perf-watch", "ship-check", "switchboard", "triage-report"])
+        self.assertEqual(names, ["bug-sweep", "docsync", "harden", "kit-break", "load-sim", "perf-watch", "profile", "ship-check", "switchboard", "triage-report"])
         self.assertTrue((self.target / ".claude/commands/break.md").exists())
 
     def test_link_makes_claude_and_trae_point_at_agents(self) -> None:
@@ -97,6 +97,32 @@ class Install(unittest.TestCase):
         install(self.target, "--claude")
         self.assertEqual((self.target / "shipkit.toml").read_text(), "# mine\n")
         self.assertNotEqual(install(self.target, "--skills", "nonsense").returncode, 0)
+
+    def test_the_config_is_written_from_what_the_project_is(self) -> None:
+        for path, text in {
+            "server/pyproject.toml": '[project]\nname = "x"\ndependencies = ["fastapi"]\n',
+            "server/app/main.py": "from fastapi import FastAPI\napp = FastAPI()\n",
+            "web/package.json": '{"name": "web", "private": true, "devDependencies": {"vite": "7"}}\n',
+            "web/vite.config.ts": "export default {}\n",
+        }.items():
+            (self.target / path).parent.mkdir(parents=True, exist_ok=True)
+            (self.target / path).write_text(text)
+        result = install(self.target, "--claude")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        config = (self.target / "shipkit.toml").read_text()
+        self.assertIn('api_dir = "server"', config)
+        self.assertIn('web_dirs = ["web"]', config)
+        self.assertIn('money = "none"', config)
+        self.assertIn('tenancy = "single-user"', config)
+        self.assertIn("tiers = []", config)
+        self.assertNotIn("Enterprise", config)
+        self.assertIn("/profile", result.stdout)
+
+    def test_the_saas_preset_is_opt_in(self) -> None:
+        result = install(self.target, "--claude", "--preset", "saas")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((self.target / "shipkit.toml").read_text(), (REPO / "shipkit.example.toml").read_text())
+        self.assertNotEqual(install(self.target, "--preset", "enterprise").returncode, 0)
 
     def test_dry_run_changes_nothing(self) -> None:
         result = install(self.target, "--dry-run")

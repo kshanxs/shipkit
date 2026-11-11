@@ -10,7 +10,7 @@ Three promises:
 1. **Nothing changes silently.** Every code change is in its package's changelog the day it is made.
 2. **Nothing exists undocumented.** Every feature has a spec, a tracker row and a place in the
    feature map (under a tier, or in the queue of features waiting for one).
-3. **Nothing is promised that is not true.** Pricing pages, policies and every status say what the
+3. **Nothing is promised that is not true.** Pricing pages (when there are priced plans), policies and every status say what the
    code does today.
 
 `check_docs.py` enforces what a machine can check. Paths and rules come from the `[docsync]` table
@@ -61,9 +61,10 @@ $D/attacks.py add|run|report|check    # the attack log (harden skill)
 Steps 5 to 12, and first: a spec from
 [references/feature_spec_template.md](references/feature_spec_template.md) at
 `docs/features/<feature>.md` (a sub-feature gets a section with its own dated status line); a
-tracker row and a code map row; a line in the feature map (feature-map skill). **Do not choose its
-tier**: put it in the queue of features waiting for one, with the date and a note for the decision.
-It is not on a pricing page or a plan card until it is built and has a tier.
+tracker row and a code map row; a line in the feature map (feature-map skill). **[plans]** **Do not
+choose its tier**: put it in the queue of features waiting for one, with the date and a note for the
+decision. It is not on a pricing page or a plan card until it is built and has a tier. Without
+priced plans (`[project] plans = "none"`), it goes under its area and there is no tier to choose.
 
 ### A bug fix
 
@@ -133,8 +134,8 @@ them. A release (`changelog.py release 0.3.0`) is chosen by the owner; the scrip
 |---|---|
 | New feature | Its spec, the tracker (row, code map, counts), the feature map's queue, the features index |
 | Feature shipped, changed or fixed | The changelog, the spec and its status line, the tracker, the feature map line (and the pricing page if a status crossed built / not built) |
-| A feature gets a tier | The feature map, the spec, the tracker, the pricing page, the policy check |
-| Price | The pricing document, the pricing page, the policies, any mock plans |
+| A feature gets a tier **[plans]** | The feature map, the spec, the tracker, the pricing page, the policy check |
+| Price **[plans]** | The pricing document, the pricing page, the policies, any mock plans |
 | Table or column | A migration, the spec's data section, the seed and the data map (seedbed) |
 | Route | The spec's API section, generated types (wire-api) |
 | Role or permission | The role pages and the data map, the spec's permissions section |

@@ -1,11 +1,11 @@
 ---
 name: stack-backend
-description: "Conventions and test workflow for a multi-tenant backend API: module layout, tenant isolation (404 for another tenant's record, 403 for another tenant's header), the request's transaction, races held by constraints or locks, permissions and their data migrations, reviewed migrations, caching, time zones, linting, and running the tests with uv (Python) or the Node equivalents. Use when adding or changing a router, service, model, schema, migration, permission, cache, job or test in the API; and when the user says 'backend', 'API', 'endpoint', 'migration', 'test backend', 'run tests' or 'test <module>'."
+description: "Conventions and test workflow for a backend API, single-user, multi-user or multi-tenant: module layout, tenant isolation when the project is multi-tenant (404 for another tenant's record, 403 for another tenant's header), access checks when it is not, the request's transaction, races held by constraints or locks, permissions and their data migrations, reviewed migrations, caching, time zones, linting, and running the tests with uv (Python) or the Node equivalents. Use when adding or changing a router, service, model, schema, migration, permission, cache, job or test in the API; and when the user says 'backend', 'API', 'endpoint', 'migration', 'test backend', 'run tests' or 'test <module>'."
 ---
 
 # Backend API
 
-The rules a multi-tenant API keeps, whatever the framework. The examples are FastAPI with
+The rules a backend API keeps, whatever the framework. The examples are FastAPI with
 SQLAlchemy and Pydantic run through **uv**; [references/node.md](references/node.md) maps each rule
 to Node (Express, Fastify or NestJS with Prisma or Drizzle). The project's own README and code
 win over this file: when they disagree, follow the code and say so.
@@ -13,6 +13,12 @@ win over this file: when they disagree, follow the code and say so.
 Find the API first: the `[stack]` table of `shipkit.toml` may name it (`api_dir = "apps/api"`);
 otherwise look for `pyproject.toml` with fastapi, django or flask, or `package.json` with express,
 fastify or @nestjs.
+
+The project profile (`python3 $SK/switchboard/scripts/project.py show`, where `$SK` is the skills
+folder this skill is installed in) says which sections apply: a section marked **[multi-tenant]**
+applies only when `tenancy = "multi-tenant"`; **[self-hosted]** only for a server people run
+themselves. With one user per install, scope by the authenticated user (or by nothing, when the
+app has one user) and keep the access rules in "Access without tenants".
 
 ## Module layout
 
@@ -26,10 +32,10 @@ Each feature is one package (`app/<module>/` or `src/modules/<module>/`):
 | `models.py` | ORM models |
 
 Register a new router in one place (`main.py`) under `/api/v1/<module>`. Shared pieces live
-together: the tenant context, permissions, rate limiting, the cache helpers, the session
+together: the request context (the tenant, when there are tenants), permissions, rate limiting, the cache helpers, the session
 dependency.
 
-## Tenant isolation (non-negotiable)
+## Tenant isolation (non-negotiable) **[multi-tenant]**
 
 Every tenant-scoped endpoint takes a verified tenant context. It reads the tenant header (for
 example `X-Workspace-ID`), checks the caller holds an active role there, and loads their
@@ -49,6 +55,17 @@ async def create_project(data: schemas.ProjectIn, user: CurrentUser, db: DbSessi
   permission, or a record outside the caller's scope inside their tenant, answers **403**.
 - Platform operators (your own staff) get read-only access through an audited support path, never
   a silent bypass.
+
+## Access without tenants
+
+When the project is not multi-tenant:
+
+- One dependency checks the caller (the password, token, API key or session) on every route that
+  reads or changes data; health and the sign-in page are the only exceptions, and a test lists them.
+- With several users, a record of another user answers **404**, as for tenants above.
+- **[self-hosted]** Every state-changing route refuses a foreign or missing `Origin` (or checks a
+  CSRF token); the `Host` header is checked against an allow-list (DNS rebinding); the server binds
+  where the docs say; secrets and tokens are stored `0600` and never logged.
 
 ## The request's transaction
 
@@ -81,11 +98,12 @@ inserts it idempotently (`INSERT ... ON CONFLICT DO NOTHING`).
 The database is the source of truth. Two kinds of helper: ones that raise on a cache error (for
 one-time codes and anything that must fail visibly) and safe ones that never raise and back off
 (for read caches). Delete by pattern with `SCAN`, never `KEYS`. Version cache keys
-(`proj:v1:*`) and put the tenant in every key; invalidate on writes.
+(`proj:v1:*`) and put the tenant (or user, when there are several) in every key; invalidate on writes.
 
 ## Time
 
-A tenant's "today" comes from one function that knows the tenant's time zone (`tenant_today()`),
+"Today" comes from one function that knows the right time zone (the tenant's, the user's, or the
+install's: `tenant_today()`, `local_today()`),
 never `date.today()` or `datetime.now()`: servers run on UTC, and a day boundary is a bug factory.
 Test it.
 
@@ -109,8 +127,9 @@ uv run alembic upgrade head
 - Local sign-in shortcuts for tests (test tokens, magic links) are refused in production by a
   check that has its own test.
 
-After a model, router or permission change, always run the isolation tests (another tenant's id,
-another tenant's header, each role) and the migration-chain test. Add isolation tests for every new
+After a model, router or permission change, always run the access tests and the migration-chain
+test: **[multi-tenant]** another tenant's id, another tenant's header and each role; otherwise each
+route without credentials and, with several users, another user's id. Add them for every new
 endpoint.
 
 ## Finishing a change

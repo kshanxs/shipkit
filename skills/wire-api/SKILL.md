@@ -1,6 +1,6 @@
 ---
 name: wire-api
-description: "The protocol for wiring a screen (web or mobile) to an API endpoint without drift: read the route and schemas first, send the tenant headers through the one client, mirror or generate the response types from OpenAPI, key queries by everything they depend on, invalidate after writes, keep mocks typed to the contract, and move the tracker's status (Frontend only, Backend only, Built). Use when connecting a screen to an endpoint, replacing a mock with the real API, adding an endpoint a screen needs, and when the user says 'wire', 'hook up', 'connect to the API', 'real API', 'frontend only', 'backend only', 'unhooked', 'contract' or 'OpenAPI'."
+description: "The protocol for wiring a screen (web or mobile) to an API endpoint without drift: read the route and schemas first, send the auth and (when multi-tenant) tenant headers through the one client, mirror or generate the response types from OpenAPI, key queries by everything they depend on, invalidate after writes, keep mocks typed to the contract, and move the tracker's status (Frontend only, Backend only, Built). Use when connecting a screen to an endpoint, replacing a mock with the real API, adding an endpoint a screen needs, and when the user says 'wire', 'hook up', 'connect to the API', 'real API', 'frontend only', 'backend only', 'unhooked', 'contract' or 'OpenAPI'."
 ---
 
 # Wire a screen to the API
@@ -27,10 +27,12 @@ Open the route and its schemas (`app/<module>/router.py` and `schemas.py`, or th
 its zod schemas). Write down: the method, the full path, the status codes (201 against 200), the
 query parameters and body, and the error codes (400, 401, 403, 404, 409, 422).
 
-### 2. Tenant headers
+### 2. Auth and tenant headers
 
-A tenant-scoped route needs the tenant header (for example `X-Workspace-ID`) and the auth token.
-Both go through the one API client's interceptor, never set by hand in a component.
+A route that needs credentials gets the auth token (or session cookie) from the one API client's
+interceptor, never set by hand in a component. **[multi-tenant]** A tenant-scoped route also needs
+the tenant header (for example `X-Workspace-ID`), through the same interceptor; skip it when the
+project profile (`project.py show`) is not multi-tenant.
 
 ### 3. Types and the client call
 

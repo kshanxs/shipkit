@@ -14,7 +14,8 @@
 #   --link           with --agents: make the .claude and .trae copies symlinks to .agents/skills
 #   --hooks          add the router hook and the docsync stop hook to <target>/.claude/settings.json
 #   --force          replace a skill folder that shipkit did not install
-#   --no-config      do not write <target>/shipkit.toml (the generic SaaS example) when it is missing
+#   --no-config      do not write <target>/shipkit.toml when it is missing
+#   --preset saas    write the generic multi-tenant SaaS example instead of detecting the project
 #   --dry-run        print what would be done, change nothing
 #
 # Re-running updates the skills it installed before. Needs bash and python3 (3.11+).
@@ -24,7 +25,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC="$HERE/skills"
 VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' "$HERE/pyproject.toml" | head -1)"
 
-usage() { sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
 [ $# -ge 1 ] || usage 1
 case "$1" in -h|--help) usage 0 ;; esac
@@ -33,7 +34,7 @@ TARGET="$1"; shift
 TARGET="$(cd "$TARGET" && pwd)"
 [ "$TARGET" != "$HERE" ] || { echo "install.sh: install into a project, not into shipkit itself" >&2; exit 1; }
 
-CLAUDE=0; AGENTS=0; TRAE=0; LINK=0; HOOKS=0; FORCE=0; CONFIG=1; DRY=0; ONLY=""
+CLAUDE=0; AGENTS=0; TRAE=0; LINK=0; HOOKS=0; FORCE=0; CONFIG=1; DRY=0; ONLY=""; PRESET=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --claude) CLAUDE=1 ;;
@@ -46,6 +47,8 @@ while [ $# -gt 0 ]; do
     --hooks) HOOKS=1 ;;
     --force) FORCE=1 ;;
     --no-config) CONFIG=0 ;;
+    --preset) PRESET="${2:?--preset needs a name (saas)}"; shift ;;
+    --preset=*) PRESET="${1#--preset=}" ;;
     --dry-run) DRY=1 ;;
     -h|--help) usage 0 ;;
     *) echo "install.sh: unknown option $1" >&2; usage 1 ;;
@@ -53,6 +56,7 @@ while [ $# -gt 0 ]; do
   shift
 done
 [ $((CLAUDE + AGENTS + TRAE)) -gt 0 ] || { CLAUDE=1; AGENTS=1; TRAE=1; }
+case "$PRESET" in ""|saas) ;; *) echo "install.sh: --preset is saas (or leave it out to detect the project)" >&2; exit 1 ;; esac
 command -v python3 >/dev/null || { echo "install.sh: python3 is required" >&2; exit 1; }
 python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' || { echo "install.sh: python3 3.11 or newer is required (tomllib)" >&2; exit 1; }
 
@@ -70,8 +74,11 @@ $(python3 "$SRC/switchboard/scripts/kit.py" members "$s")" ;;
     esac
   done
   SKILLS=$(printf '%s\n' "$SKILLS" | sed '/^$/d' | awk '!seen[$0]++')
-  printf '%s\n' "$SKILLS" | grep -qx switchboard || SKILLS="$SKILLS
-switchboard"
+  # The router and the profile come with every install: every skill reads the project profile.
+  for always in switchboard profile; do
+    printf '%s\n' "$SKILLS" | grep -qx "$always" || SKILLS="$SKILLS
+$always"
+  done
 else
   SKILLS="$ALL"
 fi
@@ -137,14 +144,22 @@ echo "shipkit $VERSION -> $TARGET"
 [ "$CLAUDE" = 1 ] && install_layout .claude "Claude Code"
 [ "$TRAE" = 1 ] && install_layout .trae "Trae"
 
-# The project's config: the generic SaaS example, never over an existing file.
+# The project's config, written from what the project is (project.py), never over an existing file.
+# An existing one gets nothing here: the profile skill adds what it lacks, with the user.
 if [ "$CONFIG" = 1 ] && [ ! -e "$TARGET/shipkit.toml" ]; then
-  if [ "$DRY" = 1 ]; then
-    echo "  would write shipkit.toml (the generic SaaS example: edit the paths to match the project)"
-  else
+  if [ "$PRESET" = saas ] && [ "$DRY" = 1 ]; then
+    echo "  would write shipkit.toml (the generic multi-tenant SaaS preset)"
+  elif [ "$PRESET" = saas ]; then
     cp "$HERE/shipkit.example.toml" "$TARGET/shipkit.toml"
-    echo "  wrote shipkit.toml (the generic SaaS example: edit the paths to match the project)"
+    echo "  wrote shipkit.toml (the generic multi-tenant SaaS preset: edit the paths to match the project)"
+  elif [ "$DRY" = 1 ]; then
+    echo "  would write shipkit.toml from the project (project.py write)"
+  else
+    python3 "$SRC/switchboard/scripts/project.py" write --root "$TARGET" | sed 's/^/  /'
+    echo "  next: ask your agent to run /profile (or @profile) to check the guesses"
   fi
+elif [ "$CONFIG" = 1 ] && [ "$DRY" != 1 ]; then
+  grep -q '^\[project\]' "$TARGET/shipkit.toml" || echo "  shipkit.toml has no [project]: ask your agent to run /profile (or @profile)"
 fi
 if [ "$DRY" = 1 ]; then
   [ "$AGENTS" = 1 ] && echo "  would write the skill table in AGENTS.md"

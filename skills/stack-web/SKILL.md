@@ -1,6 +1,6 @@
 ---
 name: stack-web
-description: "Conventions and validation for a web front end on Vite or Vite+ (vite-plus, the `vp` command): layout, one API client with tenant headers, routing with typed search params, server state vs client state, query keys, forms with a schema, offline outbox, sign-in, accessibility, tests and the checks to run. Use when building, fixing or refactoring a page, component, hook, store, route, form or mock in a web app; when touching vite.config.*; and when the user says 'frontend', 'UI', 'screen', 'page', 'component', 'Vite', 'Vite+', 'vp', 'typecheck' or 'vitest'."
+description: "Conventions and validation for a web front end on Vite or Vite+ (vite-plus, the `vp` command): layout, one API client (with tenant headers when the project is multi-tenant), routing with typed search params, server state vs client state, query keys, forms with a schema, offline outbox, sign-in, accessibility, tests and the checks to run. Use when building, fixing or refactoring a page, component, hook, store, route, form or mock in a web app; when touching vite.config.*; and when the user says 'frontend', 'UI', 'screen', 'page', 'component', 'Vite', 'Vite+', 'vp', 'typecheck' or 'vitest'."
 ---
 
 # Web front end (Vite and Vite+)
@@ -34,17 +34,21 @@ other; shared code goes in a package, and a boundary check in CI holds it.
   which would skip its auth refresh, its tenant header and its offline outbox.
 - The API's route and schemas are the contract: match field names, query parameters and status
   codes exactly (wire-api skill). Prefer types generated from the OpenAPI document.
-- Tenant-scoped calls send the tenant header (`X-Workspace-ID`). Headers are routing context, not
-  authorization: the API enforces permissions.
+- **[multi-tenant]** Tenant-scoped calls send the tenant header (`X-Workspace-ID`). Headers are
+  routing context, not authorization: the API enforces permissions. Skip this when the project
+  profile (`project.py show`) is not multi-tenant.
 - A change that may wait for a connection says so where it is made and handles a queued answer.
   Never queue a change that takes money, allocates a number, or would be wrong an hour later.
+- **[self-hosted]** A web app served by a self-hosted server sends changes from its own origin
+  only, with the same-origin credentials the server checks (Origin or a CSRF token); never turn
+  those checks off for convenience in development builds that ship.
 
 ## Routing
 
 - A page reads its own params and search through the router's typed API, never by parsing
   `window.location` or building a `URLSearchParams` by hand.
 - Everything after the `?` is declared in a schema (zod); a bad value is dropped, never an error.
-- Guards decide signed in or not and tenant chosen or not; what a role may see follows the API's
+- Guards decide signed in or not (and, with tenants, tenant chosen or not); what a role may see follows the API's
   answer.
 - A loader starts a request and never waits for it; the page's hook uses the same query options,
   or the request is made twice.
