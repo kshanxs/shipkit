@@ -1,0 +1,78 @@
+---
+name: switchboard
+description: "The router for the shipkit skills: picks the skills a request needs (from @names, /slash commands, trigger phrases and file paths), runs as a Claude Code UserPromptSubmit hook so the right skills are suggested on every message, writes the slash-command shortcuts (/api, /web, /native, /docs, /harden, ...) and an optional skill table in AGENTS.md, and checks that everything is in step with the skills installed. Use when the user asks which skill fits, what the slash commands are, to add or rename a skill or a short name, or when route.py --check fails."
+---
+
+# Switchboard
+
+One table of skills (`skills.toml`, beside this file) and one script (`scripts/route.py`). `$SK` is
+the skills folder this skill is installed in.
+
+```bash
+R="python3 $SK/switchboard/scripts/route.py"
+$R "add an endpoint and its screen"   # the skills that fit, and why
+$R --list                             # every installed skill and its short names
+$R --resolve                          # every skill by @name and every /short and @short resolves (exit 1 if not)
+$R --write                            # write .claude/commands/<short>.md (and the AGENTS.md table, if marked)
+$R --check                            # exit 1 when skills.toml, the commands or AGENTS.md are stale
+```
+
+## How a request picks a skill
+
+1. **Named:** `@<short>` or `@<skill>` anywhere (`@api @seed add invoices`), or `/<short>` at the
+   very start in Claude Code (`/docs sync the docs`). A named skill comes first.
+2. **Triggers:** regular expressions in `skills.toml`, matched case-insensitively.
+3. **Paths:** globs in `skills.toml`, matched against file paths in the request.
+4. **Companions:** `with` brings related skills along (docsync after a code skill).
+
+At most four skills are suggested; a short reply ("yes", "continue") gets none. Only installed
+skills (folders beside this one with a `SKILL.md`) are ever picked, so a partial install routes
+only to what it has.
+
+## The slash commands
+
+| Group | Skill | Commands |
+|---|---|---|
+| Build | stack-backend | `/api`, `/be` |
+| Build | stack-web | `/web`, `/fe` |
+| Build | stack-native | `/native`, `/rn`, `/mobile` |
+| Build | wire-api | `/wire` |
+| Build | seedbed | `/seed` |
+| Build | fanout | `/fanout`, `/par` |
+| Break & Test | harden | `/harden`, `/bth` |
+| Break & Test | bug-sweep | `/sweep`, `/hunt` |
+| Break & Test | load-sim | `/load`, `/sim` |
+| Break & Test | perf-watch | `/perf`, `/mon` |
+| Break & Test | triage-report | `/triage`, `/report` |
+| Break & Test | ship-check | `/ship`, `/ready` |
+| Docs & Flow | docsync | `/docs`, `/ds` |
+| Docs & Flow | feature-map | `/fmap`, `/features` |
+| Docs & Flow | open-loops | `/loops`, `/oq` |
+| Docs & Flow | handoff | `/handoff` |
+| Docs & Flow | switchboard | `/sb`, `/route` |
+
+Each command file says "use the `<skill>` skill for this request" and passes the arguments on. In
+agents without slash commands, write `@<short>` in the message instead.
+
+## Where things go
+
+- The project is the folder above `.claude`, `.agents` or `.trae` (or `SHIPKIT_ROOT`).
+- Commands go to `<project>/.claude/commands/` (`--commands-dir` or `SHIPKIT_COMMANDS_DIR` to change
+  it). Generated files carry a marker line; `--write` removes a generated command whose short name
+  is gone and never touches a command you wrote yourself.
+- `AGENTS.md`: if it holds `<!-- shipkit:skills:start ... -->` and `<!-- shipkit:skills:end -->`,
+  `--write` keeps the skill table between them (install.sh adds the markers).
+- The hook: `install.sh --hooks` adds `route.py hook` to `.claude/settings.json` under
+  `UserPromptSubmit`. It prints the skills that fit as context and is silent when none do.
+
+## Adding or renaming a skill
+
+1. Add or change its table in `skills.toml`: `short` (2 to 12 lowercase letters, digits, hyphens;
+   the first is the main one), `summary`, `triggers`, `paths`, `with`.
+2. `route.py --write`, then `route.py --check`.
+
+The check refuses a short name used twice, one that is another skill's name, one that would hide a
+Claude Code built-in command (`/help`, `/review`, `/init`, ...), a skill with no triggers and no
+paths, a `with` naming no skill, and a stale command or table. Keep triggers specific: a skill
+suggested for every message is noise. Add your own project's paths (`apps/billing/**`) to the
+skills that own them.

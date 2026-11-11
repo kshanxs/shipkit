@@ -1,0 +1,120 @@
+# ship-check.toml: the launch-readiness checklist for the ship-check skill. Generic SaaS example.
+#
+# Every list is configurable. `hints` are globs from the project root: the scaffold lists the
+# files they match as "files to read" for that item; they are pointers, never verdicts.
+# `ship_check.py init` copies this file to the project root.
+
+[product]
+name = "Example SaaS"
+
+[target]
+deploy_branch = "main"            # fixes that are not here yet are called out
+
+# What the audit reads first. Documents can be stale: confirm each claim in the code.
+[sources]
+"status and plans" = ["docs/feature_status.md", "docs/feature_catalog.md", "docs/open_questions.md", "ROADMAP.md"]
+"bugs" = ["docs/testing/bug_report.md", "docs/testing/attack_log.md"]
+"infrastructure" = ["docs/deployment/**/*.md", "docs/infrastructure*.md", "infra/**/*.tf", "Dockerfile", "docker-compose*.yml", "fly.toml", "render.yaml", "vercel.json"]
+"ci" = [".github/workflows/*.yml", ".gitlab-ci.yml"]
+"security" = ["SECURITY.md", "**/security/**/*.py", "**/middleware/**"]
+"legal" = ["**/legal/**", "**/privacy*", "**/terms*"]
+
+# The operator console: what the team can do for a customer without touching the database.
+[[capabilities]]
+name = "Support and ticketing"
+hints = ["**/support/**", "docs/**/support*.md"]
+
+[[capabilities]]
+name = "Support access or impersonation, audited and time-limited"
+hints = ["**/impersonat*", "**/support_access*", "**/admin/**"]
+
+[[capabilities]]
+name = "Uptime and health"
+hints = ["**/health*", "**/status*"]
+
+[[capabilities]]
+name = "Configuration and feature flags"
+hints = ["**/flags*", "**/feature_flag*", "**/config*"]
+
+[[capabilities]]
+name = "Suspend or offboard a customer"
+hints = ["**/suspend*", "**/offboard*", "**/admin/**"]
+
+[[capabilities]]
+name = "Billing operations (refunds, credits, plan changes)"
+hints = ["**/billing/**", "**/payments/**"]
+
+[[capabilities]]
+name = "Audit log"
+hints = ["**/audit*"]
+
+# Onboarding, in the order a customer meets it. Compare each with common practice and name the gap.
+[[flows]]
+name = "Sign-up and email verification"
+hints = ["**/auth/**", "**/signup*"]
+
+[[flows]]
+name = "First workspace and its owner"
+hints = ["**/onboarding/**", "**/workspaces/**"]
+
+[[flows]]
+name = "Inviting members and setting roles"
+hints = ["**/invite*", "**/members/**"]
+
+[[flows]]
+name = "Choosing a plan and paying"
+hints = ["**/billing/**", "**/checkout*"]
+
+[[flows]]
+name = "Developer and test accounts (never in production)"
+hints = ["**/seed*", "**/fixtures/**", "seedbed.toml"]
+
+# The status checklist. `note` names the regulation or standard that applies to you: GDPR, CCPA,
+# HIPAA, PCI DSS, SOC 2, a national data-protection law. Replace or add items to match it.
+[[checklist]]
+group = "Privacy and data protection"
+note = "name the regulations that apply"
+hints = ["**/privacy*", "**/consent*", "**/retention*", "**/gdpr*", "docs/**/privacy*.md"]
+items = ["Consent recorded where it is needed", "Data minimisation", "Retention and deletion", "Breach notification process", "Data subject rights (access, export, delete)", "Sub-processors listed"]
+
+[[checklist]]
+group = "Security"
+items = [
+  { name = "Audit logging", hints = ["**/audit*"] },
+  { name = "Rate limiting", hints = ["**/rate_limit*", "**/ratelimit*", "**/throttl*"] },
+  { name = "Tenant isolation (row-level security or scoped queries, tested)", hints = ["**/tenant*", "**/rls*", "**/test_*isolation*"] },
+  { name = "How tokens and sessions are stored", hints = ["**/auth/**", "**/session*"] },
+  { name = "Secrets management (no secrets in the repository)", hints = [".env.example", "**/secrets*"] },
+]
+
+[[checklist]]
+group = "Resilience"
+items = ["Backups", "A restore that has been tested", "Disaster recovery with RPO and RTO stated"]
+hints = ["docs/**/backup*.md", "docs/**/disaster*.md", "infra/**"]
+
+[[checklist]]
+group = "Observability"
+items = ["Structured logs", "Metrics", "Traces", "Alerts that page someone"]
+hints = ["**/logging*", "**/telemetry*", "**/metrics*", "**/sentry*", "**/otel*"]
+
+[[checklist]]
+group = "Delivery"
+items = ["SLOs", "CI with required checks", "A deploy workflow", "A staging environment"]
+hints = [".github/workflows/*.yml", "docs/deployment/**"]
+
+[[checklist]]
+group = "Supply chain"
+items = ["Dependency updates", "Vulnerability scanning", "Secret scanning"]
+hints = [".github/dependabot.yml", "renovate.json", ".github/workflows/*.yml", ".gitleaks.toml"]
+
+[[checklist]]
+group = "Operations"
+items = ["Incident response runbook", "Support and ticketing", "More than one server or region", "Infrastructure as code"]
+hints = ["docs/**/runbook*.md", "docs/**/incident*.md", "infra/**"]
+
+[pricing]
+hints = ["docs/**/pricing*.md", "**/pricing*", "**/plans*"]
+items = ["Plans and their prices", "Per-seat or usage price", "Minimums and steps", "Quantity-based tiers", "Tax (VAT, GST, sales tax)", "Trial and grace days", "Payment provider fees", "Unit economics (cost to serve one customer)"]
+
+[bugs]
+hints = ["docs/testing/bug_report.md"]

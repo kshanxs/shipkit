@@ -1,0 +1,18 @@
+[project]
+name = "shipkit"
+version = "0.1.0"
+description = "Stack-agnostic dev skills for coding agents: build, break and test, docs and flow."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["skills", "tests"]
+addopts = "--import-mode=importlib -q"

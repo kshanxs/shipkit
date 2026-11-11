@@ -1,0 +1,83 @@
+# seedbed.toml: the scenario config for the seedbed skill. Generic SaaS example.
+#
+# A multi-tenant app: workspaces hold projects and tasks, members have roles, and billing
+# runs on plans. Copy this to the project root as seedbed.toml (check_seeds.py --init does it),
+# then rename the modules, files and personas to your own. Every table is optional: a check
+# whose table is missing is skipped.
+
+# What a seed run may be asked for. A module is an area the seed can fill on its own; a scenario
+# is a situation staged on top of the seed for a demo or a test, with the module it needs ("" for none).
+[catalogue]
+modules = ["projects", "tasks", "comments", "billing"]
+
+[catalogue.scenarios]
+trial_ending = "billing"          # a workspace whose trial ends in two days
+busy_monday = "tasks"             # every member with overdue and due-today tasks
+fresh_signup = ""                 # an empty workspace, as a new customer sees it
+
+# Where the seed code says what it fills. module_marker and scenario_marker are regular
+# expressions; their first group is the module or scenario name.
+[seed]
+files = ["scripts/seed.py"]
+module_marker = 'wants\("([a-z_]+)"\)'
+scenario_files = ["scripts/seed.py"]
+scenario_marker = '^def scenario_([a-z_]+)\('
+
+# The people a demo or a test signs in as. Either list them here, or point at the file that
+# declares them and give a pattern whose groups are (slug, login).
+[personas]
+id_pattern = '[a-z]+@demo\.test'
+required = ["owner", "admin", "member", "viewer"]
+
+[[personas.list]]
+slug = "owner"
+login = "owner@demo.test"
+
+[[personas.list]]
+slug = "admin"
+login = "admin@demo.test"
+
+[[personas.list]]
+slug = "member"
+login = "member@demo.test"
+
+[[personas.list]]
+slug = "viewer"
+login = "viewer@demo.test"
+
+# The data map: one home for each entity (storage, who may do what, routes, offline use).
+# Every table a client keeps (a Dexie database in a web app, a SQLite schema in a mobile app)
+# must be named in it, in backticks. `path` is read for Dexie `.stores({...})`; `tables` lists
+# others by hand (a Drizzle or WatermelonDB schema, for example).
+[map]
+file = "docs/data_map.md"
+internal = ["meta"]
+
+[[map.stores]]
+label = "Web device table"
+path = "apps/web/src/db/index.ts"
+
+[[map.stores]]
+label = "Mobile table"
+tables = ["tasks", "sync_state"]
+
+# One page per role, each with a section saying what the role may do with each entity.
+[roles]
+dir = "docs/roles"
+section = "## Data and API Access"
+
+# Files whose change usually means the seed must change too (warnings with --changed).
+[changed]
+shapes = ['apps/api/app/[^/]+/(schemas|models)\.py', 'prisma/schema\.prisma']
+
+# Folders that were removed on purpose and must not come back.
+[retired]
+paths = []
+
+# Tests that hold the seed together, run by check_seeds.py --run. `needs` is a path (relative
+# to cwd) that must exist first, such as an installed virtualenv; without it the test is skipped
+# with a warning.
+[[tests]]
+cwd = "."
+command = "uv run python scripts/seed.py --check"
+needs = "scripts/seed.py"

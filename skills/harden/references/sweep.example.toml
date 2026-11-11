@@ -1,0 +1,26 @@
+# sweep.toml: the config for isolation_sweep.py. Generic SaaS example (a workspace is the tenant).
+# Run it against a seeded scratch database with two tenants, never production.
+# Tokens are read from the environment (${TOKEN_A}, ${TOKEN_B}): mint them on the test stack.
+
+openapi = "http://localhost:8000/openapi.json"   # FastAPI serves this; for others, export the document to a file
+base_url = "http://localhost:8000"
+allow_hosts = []
+prefix = "/api/v1"
+skip = ["/api/v1/admin/*", "/api/v1/auth/*", "/api/v1/health"]
+tenant_header = "X-Workspace-ID"                   # leave "" if the tenant comes from the token alone
+
+[a]                                                # the tenant whose records are aimed at
+tenant = "1"
+headers = { Authorization = "Bearer ${TOKEN_A}" }
+
+[b]                                                # the tenant doing the aiming
+tenant = "2"
+headers = { Authorization = "Bearer ${TOKEN_B}" }
+
+[ids]                                              # real records of tenant A, by path parameter name
+workspace_id = "1"
+project_id = "11"
+task_id = "301"
+comment_id = "9001"
+invoice_id = "77"
+id = "11"

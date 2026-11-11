@@ -1,0 +1,133 @@
+# load-scenario.toml: the scenario config for the load-sim skill. Generic SaaS example.
+#
+# A multi-tenant app where a workspace is the tenant: members open a dashboard, list and create
+# tasks, comment, and owners look at billing. `sim.py init` writes this file; edit every section
+# to match your API. It runs as-is against stub_server.py (port 8077) to prove the harness.
+
+[target]
+base_url = "http://localhost:8077"
+allow_hosts = []                      # this machine only; add a test server's host on purpose, never production
+headers = { "User-Agent" = "shipkit-load-sim" }
+
+# How a request is signed. Tokens are minted on the test stack by you, never copied from production.
+#   none         no auth header
+#   env          SIM_TOKEN_<ROLE> (or SIM_TOKEN) from the environment
+#   tokens_file  a JSON file: { "<tenant>": { "<role>": "<token>" }, "*": { ... } }
+#   template     a header built from the tenant and role (what stub_server.py accepts)
+[auth]
+mode = "template"
+header = "Authorization"
+template = "Bearer sim-{tenant}-{role}"
+
+# The tenants that take part, the header that names one, and values a path or body may use.
+# Placeholders anywhere in a path, header or body: {tenant}, {other_tenant}, {n} (the call's number),
+# {uuid}, {rand:1-50}, and each name under [tenants.vars].
+[tenants]
+ids = "1..50"
+header = "X-Workspace-ID"
+forwarded_for = true                  # one address per tenant, as an office sits behind one router
+
+[tenants.vars]
+project = "{rand:1-5}"
+task = "{rand:1-200}"
+
+# People per tenant by role, and their busiest hour: what `sim.py demand` multiplies out.
+[population]
+owner = 1
+admin = 2
+member = 25
+viewer = 10
+
+[peak]
+label = "Monday 9 to 10 AM"
+requests_per_hour = { owner = 30, admin = 60, member = 90, viewer = 20 }
+active_share = { owner = 0.8, admin = 0.9, member = 0.7, viewer = 0.3 }
+burst_factor = 2.0
+
+# Idempotent changes: the header a client sends, and the one the server answers a replay with.
+[idempotency]
+header = "Idempotency-Key"
+replayed_header = "Idempotency-Replayed"
+
+# Every kind of request. `role` defaults to the part of the name before the first dot.
+# `replay` sends that share of successful changes twice with one key: each must come back replayed.
+# `cross_tenant` makes a leak probe ("header": another tenant's header; "path": its ids in the path),
+# and `expect = "4xx"` counts every 2xx it gets as a possible leak.
+[[requests]]
+name = "member.dashboard"
+method = "GET"
+path = "/api/v1/dashboard"
+
+[[requests]]
+name = "member.tasks"
+method = "GET"
+path = "/api/v1/workspaces/{tenant}/projects/{project}/tasks?page={rand:1-3}"
+
+[[requests]]
+name = "member.create_task"
+method = "POST"
+path = "/api/v1/workspaces/{tenant}/projects/{project}/tasks"
+body = { title = "Sim task {n}", priority = "normal" }
+idempotency = true
+replay = 0.25
+
+[[requests]]
+name = "member.comment"
+method = "POST"
+path = "/api/v1/workspaces/{tenant}/tasks/{task}/comments"
+body = { body = "Looks good ({n})" }
+idempotency = true
+
+[[requests]]
+name = "viewer.tasks"
+method = "GET"
+path = "/api/v1/workspaces/{tenant}/projects/{project}/tasks"
+
+[[requests]]
+name = "owner.billing"
+method = "GET"
+path = "/api/v1/workspaces/{tenant}/billing/invoices"
+
+[[requests]]
+name = "admin.members"
+method = "GET"
+path = "/api/v1/workspaces/{tenant}/members"
+
+[[requests]]
+name = "abuse.other_header"
+role = "member"
+method = "GET"
+path = "/api/v1/dashboard"
+cross_tenant = "header"
+expect = "4xx"
+
+[[requests]]
+name = "abuse.other_path"
+role = "member"
+method = "GET"
+path = "/api/v1/workspaces/{other_tenant}/projects/1/tasks"
+cross_tenant = "path"
+expect = "4xx"
+
+[[requests]]
+name = "abuse.viewer_writes"
+role = "viewer"
+method = "POST"
+path = "/api/v1/workspaces/{tenant}/projects/{project}/tasks"
+body = { title = "Should be refused" }
+expect = "4xx"
+
+# Profiles: relative weights of request kinds for a part of the day.
+[profiles]
+peak = { "member.dashboard" = 3, "member.tasks" = 4, "member.create_task" = 2, "member.comment" = 1, "viewer.tasks" = 1, "admin.members" = 0.5 }
+evening = { "member.dashboard" = 1, "member.tasks" = 1, "owner.billing" = 0.5 }
+mixed = { "member.dashboard" = 2, "member.tasks" = 2, "member.create_task" = 1, "member.comment" = 1, "viewer.tasks" = 1, "owner.billing" = 0.3, "admin.members" = 0.3 }
+abuse = { "abuse.other_header" = 1, "abuse.other_path" = 1, "abuse.viewer_writes" = 1 }
+
+# The run fails (exit 1) when any of these is broken.
+[thresholds]
+error_rate = 0.01                     # share of 5xx or no answer
+p95_ms = 800
+p99_ms = 2000
+abuse_2xx = 0                         # leak probes answered 2xx
+not_replayed = 0                      # changes sent twice with one key and done twice

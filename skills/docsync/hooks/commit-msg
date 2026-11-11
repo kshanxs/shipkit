@@ -1,0 +1,26 @@
+#!/bin/sh
+# Commit messages follow Conventional Commits 1.0.0: type(scope): summary.
+# The type is how a change is found later and what a release is sorted by.
+# Bypass for a deliberate exception: git commit --no-verify
+subject=$(sed -e '/^#/d' -e '/^[[:space:]]*$/d' "$1" | head -n 1)
+case "$subject" in
+  ""|"Merge "*|"Revert "*|"fixup! "*|"squash! "*|"amend! "*) exit 0 ;;
+esac
+if printf '%s\n' "$subject" | grep -Eq '^(feat|fix|docs|refactor|perf|test|build|ci|chore|style|revert|wip)(\([a-z0-9][a-z0-9,/_-]*\))?!?: [^ ]'; then
+  exit 0
+fi
+cat >&2 <<MESSAGE
+Commit stopped: the first line is not a Conventional Commit.
+
+  $subject
+
+Write it as  type(scope): summary  where the scope is optional, for example:
+
+  fix(billing): charge a late fee once when a payment and the nightly job overlap
+  feat(search): filter projects by owner
+  docs: correct the hosting section
+
+Types: feat, fix, docs, refactor, perf, test, build, ci, chore, style, revert, wip.
+Put ! before the colon for a change that breaks something. To commit anyway: git commit --no-verify
+MESSAGE
+exit 1

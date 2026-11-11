@@ -1,0 +1,218 @@
+# Short names and triggers for the shipkit skills (<skills dir>/<name>/SKILL.md).
+#
+# One table a skill. route.py reads this file to:
+#   - pick the skills a request needs (the UserPromptSubmit hook, or `route.py "<request>"` from any agent);
+#   - write the slash commands (<short>.md: /docs, /api, ...) and, when AGENTS.md has the markers,
+#     the skill table in it (`route.py --write`);
+#   - check that every installed skill is here and nothing is stale (`route.py --check`).
+#
+# Fields
+#   short     short names; the first is the main one. `/docs` in Claude Code, `@docs` anywhere
+#   summary   one line for the skill table and the command's description
+#   triggers  regular expressions (case-insensitive) matched against the request
+#   paths     globs matched against file paths named in the request
+#   with      skills that go with this one when it is picked (docsync after a code change)
+#
+# Triggers are literal strings ('...'): a backslash is a backslash. Keep them specific; a
+# skill suggested for every message is noise. Add your project's own paths to `paths`.
+
+# ── Build ─────────────────────────────────────────────────────────────────────
+
+[stack-backend]
+short = ["api", "be"]
+summary = "Backend conventions: modules, tenant isolation, transactions, migrations, permissions, caching, tests (Python via uv, or Node)"
+triggers = [
+  '\bbackend\b|\bfastapi\b|\bdjango\b|\bflask\b|\bexpress\b|\bnestjs\b|\bsqlalchemy\b|\bprisma\b|\bdrizzle orm\b',
+  '\bendpoints?\b|\bapi (route|call|change)s?\b|\brouters?\b',
+  '\bmigrations?\b|\balembic\b|\b(new|add an?) (table|column|model)\b',
+  '\bpermissions?\b|\btenant\b|\bmulti-?tenan',
+  '\bredis\b|\bcache\b',
+  '\bpytest\b|\btest (the )?backend\b|\bruff\b|\buv run\b',
+]
+paths = ["apps/api/**", "api/**", "backend/**", "server/**", "services/**", "src/server/**"]
+with = ["docsync"]
+
+[stack-web]
+short = ["web", "fe"]
+summary = "Web front end on Vite or Vite+: routing, server state, forms, the API client, accessibility, checks"
+triggers = [
+  '\bfrontend\b|\bfront-end\b|\bweb app\b',
+  '\b(screen|page|component|dialog|modal|sidebar|layout|form)s?\b',
+  '\bvite\+?\b|\bvite-plus\b|\bvp (dev|build|test|lint)\b|\bvitest\b',
+  '\breact\b|\bvue\b|\bsvelte\b|\btanstack\b|\bzustand\b|\btailwind\b|\bdark mode\b',
+  '\btypecheck\b',
+]
+paths = ["apps/web/**", "web/**", "frontend/**", "src/components/**", "src/routes/**", "src/pages/**", "vite.config.*"]
+with = ["docsync"]
+
+[stack-native]
+short = ["native", "rn", "mobile"]
+summary = "React Native and Expo apps: Expo Router, offline database and sync, native modules, builds, tests"
+triggers = [
+  '\bmobile\b|\bios\b|\bandroid\b|\bexpo\b|\breact native\b|\breact-native\b',
+  '\beas (build|update|submit)\b|\bprebuild\b|\bdev client\b',
+  '\bsqlite\b|\bpush notifications?\b|\boffline[- ]first\b',
+]
+paths = ["apps/mobile/**", "mobile/**", "app.json", "app.config.*", "eas.json"]
+with = ["docsync"]
+
+[wire-api]
+short = ["wire"]
+summary = "Wiring a screen to an API endpoint: read the contract, tenant headers, typed client, query keys, mocks, tracker status"
+triggers = [
+  '\bwire (up )?(it|the|this|a)?\s*(screen|page|ui|frontend)?\b.*\b(api|endpoint|backend)\b',
+  '\bhook (it |this |the \w+ )?(up )?to (the )?(api|backend|endpoint)\b',
+  '\bconnect (the |this )?(screen|page|ui|frontend|app) to\b',
+  '\b(frontend|backend) only\b|\bunhooked\b|\bon (the )?mock\b|\breal api\b',
+  '\bapi contract\b|\bopenapi\b|\bgenerated types\b',
+]
+with = ["stack-web", "docsync"]
+
+[seedbed]
+short = ["seed"]
+summary = "Seed data for every feature: an idempotent seed, a catalogue of modules and scenarios, personas, schema parity, the data map"
+triggers = [
+  '\bseed(s|ing|ed)?\b|\bseed[_ ]data\b',
+  '\bdemo (data|workspace|account|tenant)\b',
+  '\bfixtures?\b|\bmock data\b|\bpersonas?\b|\bschema parity\b',
+]
+paths = ["**/seed*", "seedbed.toml", "docs/roles/**", "docs/data_map.md"]
+with = ["docsync"]
+
+[fanout]
+short = ["fanout", "par"]
+summary = "Several agents building features at once in git worktrees: split the work, reserve numbers, brief, land one branch at a time"
+triggers = [
+  '\bin parallel\b|\bat the same time\b|\bside by side\b',
+  '\b(several|multiple|many|two|three) (agents|subagents)\b|\bsub-?agents\b',
+  '\bworktrees?\b|\bintegration branch\b|\bfanout/[\w-]+/',
+  '\bmerge conflicts?\b',
+]
+paths = [".fanout/**"]
+
+# ── Break & Test ──────────────────────────────────────────────────────────────
+
+[harden]
+short = ["harden", "bth"]
+summary = "Test first, then try to break it: hostile input, other tenants' data, races, offline sync, failures, load; every flaw a failing test, then a fix"
+triggers = [
+  '\btest matrix\b|\bevery combination\b|\bpairwise\b',
+  '\bharden(ing)?\b|\bbreak (it|this|the app)\b|\badversarial\b|\bfuzz',
+  '\bidor\b|\bdata isolation\b|\bcross[- ]tenant\b|\btenant isolation\b',
+  '\brace conditions?\b|\bconcurren(t|cy)\b|\bdouble[- ]?(submit|click|charge|spend)\b',
+  '\bsecurity (review|test|audit)\b|\bvulnerab',
+  '\btdd\b|\btest[- ]driven\b|\bwrite the tests? first\b',
+]
+with = ["docsync"]
+
+[bug-sweep]
+short = ["sweep", "hunt"]
+summary = "Review new commits and sweep the codebase for bugs, leaks, races, permission gaps, sync and money errors, from the test matrix's gaps"
+triggers = [
+  '\bpenetration test|\bpen[- ]?test',
+  '\bbug[- ]?(hunt|sweep)\b|\bhunt for bugs\b|\bfind bugs\b',
+  '\bsweep (the )?(whole )?(branch|codebase|repo)\b',
+  '\breview (the )?new commits\b',
+]
+with = ["triage-report"]
+
+[load-sim]
+short = ["load", "sim"]
+summary = "Simulate many tenants' real usage from a scenario config: open-model traffic, profiles, abuse probes, thresholds, demand"
+triggers = [
+  '\bsimulat(e|ion)\b',
+  '\b\d{2,} (tenants|workspaces|customers|orgs)\b',
+  '\bload[- ]?(test|sim)',
+  '\bstress test|\bthroughput\b|\bk6\b|\blocust\b',
+]
+paths = ["load-scenario.toml"]
+with = ["perf-watch", "triage-report"]
+
+[perf-watch]
+short = ["perf", "mon"]
+summary = "Server and database stats during a load run or bug sweep: latency, errors, slow and N+1 queries, pool, cache, CPU and memory"
+triggers = [
+  '\bperf(ormance)?[- ](monitor|watch|stats)',
+  '\bn\+1\b|\bpg_stat_statements\b|\bslow quer(y|ies)\b',
+  '\bp9[59]\b|\blatency\b',
+  '\bmemory leak\b|\bconnection pool\b',
+]
+with = ["triage-report"]
+
+[triage-report]
+short = ["triage", "report"]
+summary = "Turn a bug sweep, load run or monitoring run into a severity-ranked report with evidence, repro, links and matrix coverage"
+triggers = [
+  '\bissues report\b|\btriage report\b|\bbug report\b',
+  '\bseverity[- ]ranked\b|\brank (the )?(bugs|issues|findings)\b',
+]
+
+[ship-check]
+short = ["ship", "ready"]
+summary = "Read-only launch-readiness audit against a configurable checklist: capabilities, onboarding, security, ops, pricing, blockers"
+triggers = [
+  '\b(launch|production|go-live|release) readiness\b',
+  '\bready (to|for) (launch|ship|deploy|go live|production)\b',
+  '\bcan we (launch|ship|go live)\b|\blaunch blockers?\b',
+  '\breadiness (audit|check|report)\b',
+]
+paths = ["ship-check.toml"]
+
+# ── Docs & Flow ───────────────────────────────────────────────────────────────
+
+[docsync]
+short = ["docs", "ds"]
+summary = "The documentation contract: changelogs, specs, the tracker, the bug register, the attack log, policies, releases"
+triggers = [
+  '\bchange ?log',
+  '\b(update|sync|audit|fix) (the )?docs?\b',
+  '\bdocument (this|it|that)\b',
+  '\b(cut|tag|make) a release\b|\brelease notes?\b|\bversion tag',
+  '\bfeature[_ ]status\b|\btracker\b',
+  '\bbug register\b|\bknown bugs\b|\bfile (a|the) bug\b|\bBUG-\d{3}\b',
+  '\battack log\b|\bATK-\d{3}\b',
+  '\bwhat did we build\b|\bwhat is the status\b',
+]
+paths = ["docs/**", "**/CHANGELOG.md", "CHANGELOG.md", "AGENTS.md"]
+
+[feature-map]
+short = ["fmap", "features"]
+summary = "The feature map: every feature, its sub-features, its tier and what is built; keeps the pricing and roadmap pages in step"
+triggers = [
+  '\bfeature (tree|map|list|catalog)\b|\blist (all )?the features\b',
+  '\bwhat is (built|left)\b|\bhow much is (done|built)\b',
+  '\bwhich (plan|tier)\b|\bpricing (page|table)\b|\broadmap\b',
+  '\bsub-?features?\b',
+]
+paths = ["docs/feature_catalog.md"]
+
+[open-loops]
+short = ["loops", "oq"]
+summary = "The open questions register: what waits for an answer, what the code does meanwhile, what each answer would change"
+triggers = [
+  '\bopen (questions?|loops?)\b',
+  '\bQ-\d{3}\b',
+  '\bwhat (is|are) (pending|undecided)\b|\bwhat do you need from me\b',
+  '\bundecided\b|\bpending decisions?\b',
+]
+paths = ["docs/open_questions.md"]
+
+[handoff]
+short = ["handoff"]
+summary = "The handoff between sessions: read HANDOFF.md at the start, add a work log row and update Now and Next at the end"
+triggers = [
+  '\bhand ?off\b',
+  '\bwork log\b',
+  '\bwhere (did )?we (leave|left) off\b',
+  '\bwhat is next\b|\blog this\b',
+]
+paths = ["HANDOFF.md"]
+
+[switchboard]
+short = ["sb", "route"]
+summary = "The router: which skill fits a request, the slash commands, and keeping them in step with the installed skills"
+triggers = [
+  '\bwhich skills?\b|\bwhat skills?\b',
+  '\bslash commands?\b|\bskill router\b|\bswitchboard\b',
+]
+paths = ["**/switchboard/**"]

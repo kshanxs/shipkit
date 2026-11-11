@@ -1,0 +1,40 @@
+# The axes of the test matrix (test_matrix.md section 2). matrix.py pairs combines them.
+# This is the generic SaaS example: a multi-tenant app where a workspace is the tenant.
+# Copy it to docs/testing/axes.toml (or the path in [harden] axes) and make it yours:
+# add a value when the product gains one (a new role, a new queued change, a new failure);
+# the next `matrix.py pairs` run includes it in every pair.
+
+[axes]
+who = [
+  "owner", "admin", "member", "viewer", "guest (invited to one project)",
+  "billing manager", "member of another team", "deactivated user",
+  "platform operator", "signed out", "API key",
+]
+data = ["own workspace", "other workspace's ID, own header", "other workspace's header", "archived record"]
+network = [
+  "online", "offline", "flaky", "back online",
+  "answer lost after commit", "5xx then online",
+]
+timing = [
+  "once", "twice in a row", "twice at once", "out of order",
+  "device 1 h behind", "device 13 h behind", "device 10 min ahead",
+  "across midnight in the workspace's time zone",
+]
+device = [
+  "one tab", "two tabs", "two devices one account", "two accounts one device",
+  "shared computer", "sign-out with changes waiting",
+  "session expired with changes waiting",
+]
+meanwhile = [
+  "nothing", "role removed", "member removed from the workspace", "record archived",
+  "plan downgraded", "workspace suspended", "feature flag switched off",
+]
+dependency = [
+  "all up", "cache down", "database slow", "email provider failing",
+  "payment provider failing", "webhook late or twice",
+]
+change = [
+  "create a project (POST /projects)", "edit a task (PATCH /tasks/{id})",
+  "invite a member (POST /invites)", "upgrade a plan (POST /billing/subscription)",
+]
+scale = ["1 workspace", "50 workspaces", "500 workspaces"]

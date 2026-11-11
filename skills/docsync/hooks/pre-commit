@@ -1,0 +1,28 @@
+#!/bin/sh
+# Documentation contract (the docsync skill): a commit carries its changelog
+# line, its documents and its status. Checks what is staged.
+# Turn on once per clone:  git config core.hooksPath <dir holding this file>
+# Bypass for a deliberate exception: git commit --no-verify
+root=$(git rev-parse --show-toplevel) || exit 0
+if ! command -v python3 >/dev/null 2>&1; then
+  echo "docsync: python3 not found; documentation checks skipped" >&2
+  exit 0
+fi
+checker=""
+for dir in .agents/skills .claude/skills .trae/skills skills; do
+  if [ -f "$root/$dir/docsync/scripts/check_docs.py" ]; then
+    checker="$root/$dir/docsync/scripts/check_docs.py"
+    break
+  fi
+done
+if [ -z "$checker" ]; then
+  echo "docsync: check_docs.py not found under .agents/skills, .claude/skills or .trae/skills; checks skipped" >&2
+  exit 0
+fi
+(cd "$root" && python3 "$checker" --changed --staged) || {
+  echo "" >&2
+  echo "Commit stopped by the documentation contract. Fix the errors above, stage the fixes and commit again." >&2
+  echo "A changelog line: python3 $(dirname "$checker")/changelog.py add <package> <type> \"<what changed>\"" >&2
+  echo "To commit anyway: git commit --no-verify" >&2
+  exit 1
+}

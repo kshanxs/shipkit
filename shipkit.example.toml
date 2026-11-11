@@ -1,0 +1,71 @@
+# shipkit.toml: one config for every shipkit skill. Generic SaaS example.
+#
+# install.sh copies this to the project root when the project has none. Every key is optional:
+# a missing table means the defaults, and a check whose files do not exist is skipped. Edit the
+# paths to match your repository; each skill's references/config.md (or SKILL.md) explains its table.
+
+# Where the code is, so the stack skills look in the right place.
+[stack]
+api_dir = "apps/api"            # a uv / Python API (pyproject.toml), or a Node API (package.json)
+web_dirs = ["apps/web"]         # Vite or Vite+ apps
+native_dir = "apps/mobile"      # an Expo app
+
+# docsync: the documentation contract.
+[docsync]
+docs_dir = "docs"
+packages = ["apps/*", "packages/*", "services/*"]   # each keeps its own CHANGELOG.md; [] for a one-package repo
+tracker = "docs/feature_status.md"
+features_dir = "docs/features"
+code_roots = []                                     # e.g. ["apps/api/app", "apps/web/src/features"]
+bug_register = "docs/testing/bug_report.md"
+attack_log = "docs/testing/attack_log.md"
+naming = "snake"                                    # snake | kebab | lower | any
+plan_sources = []                                   # e.g. ["docs/feature_catalog.md"] once the feature map exists
+policy_pages = []                                   # e.g. ["apps/web/src/legal/*Page.tsx"]
+policy_stamp = ""                                   # e.g. "apps/web/src/legal/updated.ts"
+pairs = []                                          # e.g. [["apps/web/src/pricing.ts", "docs/pricing.md"]]
+
+# Retired names that must not come back (allowed in changelogs). Add one per rename or price change.
+# [[docsync.stale]]
+# label = "retired plan name"
+# pattern = '\bStarter Plus\b'
+
+# harden: the test matrix and its axes (start from the skill's references/).
+[harden]
+matrix = "docs/testing/test_matrix.md"
+axes = "docs/testing/axes.toml"
+
+# open-loops: the open questions register.
+[open_loops]
+register = "docs/open_questions.md"
+
+# feature-map: the map of features and tiers.
+[feature_map]
+catalog = "docs/feature_catalog.md"
+tiers = ["Free", "Pro", "Enterprise"]
+# comparison = "apps/web/src/pricing.ts"            # a file with `export const COMPARISON = [...]`
+# catalog_out = "apps/web/src/catalog.json"         # generated for the roadmap and pricing pages
+
+# fanout: parallel agents in worktrees (see the skill's references/config.md for every key).
+[fanout]
+max_parallel = 3
+ports = { API_PORT = 8000, WEB_PORT = 5173 }
+
+# seedbed: the scenario config lives in its own file.
+[seedbed]
+config = "seedbed.toml"
+
+# ship-check: the launch checklist lives in its own file (default: the skill's generic SaaS checklist).
+[ship_check]
+checklist = "ship-check.toml"
+
+# handoff: the file sessions read first and write last.
+[handoff]
+file = "HANDOFF.md"
+owner = "the owner"
+timezone = "UTC"
+
+# triage-report: where code links point, and the time zone for dates.
+[triage]
+repo_url = ""                                       # default: the origin remote
+timezone = "UTC"
