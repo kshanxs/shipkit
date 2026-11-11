@@ -493,6 +493,9 @@ def main() -> int:
     parser.add_argument("--show", metavar="Q-NNN", help="print one entry, with the code its Lines point at")
     args = parser.parse_args()
 
+    if not (ROOT / REGISTER).exists():
+        print(f"open questions: {REGISTER} does not exist yet; nothing to check (start one from the skill's references/open_questions.example.md)")
+        return 0
     text, questions, problems = load()
     if not text:
         print(problems[0])

@@ -29,5 +29,9 @@ green stops it before flow. Stopping is a result, not a failure to hide: report 
 
 ## 3. Report
 
+**Evidence rule:** a step is **done** only when its evidence was produced in this session: the
+command that was run and what it printed (test counts, exit code, the report's path). A step whose
+result you did not see is **not verified**, never done. Report a failure as it is.
+
 One table for the whole run (kit, step, result, evidence), the triage report's top findings, and
 what is next. `/break full` and `/break launch` stay for when the user asks.

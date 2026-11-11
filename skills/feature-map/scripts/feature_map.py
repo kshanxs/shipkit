@@ -354,8 +354,8 @@ def main() -> int:
 
     path = ROOT / CATALOG
     if not path.exists():
-        print(f"{CATALOG} is missing")
-        return 1
+        print(f"feature map: {CATALOG} does not exist yet; nothing to check (start one from the skill's references/feature_catalog.example.md)")
+        return 0
     text = path.read_text(encoding="utf-8")
     features, problems = parse(text)
 

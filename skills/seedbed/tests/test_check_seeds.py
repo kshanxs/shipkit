@@ -161,9 +161,16 @@ class CheckSeeds(unittest.TestCase):
 
     # ---- config ----
 
-    def test_no_config_says_how_to_start(self):
+    def test_no_config_skips_and_says_how_to_start(self):
         (self.root / "seedbed.toml").unlink()
-        self.assertFails("config", "--init")
+        env = {**os.environ, "SHIPKIT_ROOT": str(self.root)}
+        for args in ([], ["--run"], ["--changed"]):
+            result = subprocess.run([sys.executable, str(SCRIPT), *args], env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(result.stderr, "")
+            self.assertEqual(len(result.stdout.splitlines()), 1, result.stdout)
+            self.assertIn("no scenario config yet (seedbed.toml)", result.stdout)
+            self.assertIn("--init", result.stdout)
 
     def test_init_writes_the_example_and_never_overwrites(self):
         (self.root / "seedbed.toml").unlink()

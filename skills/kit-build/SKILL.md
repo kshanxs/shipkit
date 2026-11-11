@@ -9,6 +9,20 @@ One command for the Build group. `kit.py` reads the request, `shipkit.toml` and 
 decides which build skills apply; you run them in order. `$SK` is the skills folder this skill is
 installed in.
 
+## 0. Frame
+
+Before planning, write in a few lines:
+
+- **The request** in your own words, and the **assumptions** you are making. If it can be read two
+  ways, say both and ask; do not pick one silently.
+- **Success criteria** as checks: `<step> -> verify: <the test or command that proves it>`. "Make
+  it work" is not a criterion; "a test for each new rule passes and the old suite still passes" is.
+- **The smallest change** that meets them. No features, options or abstractions nobody asked for.
+
+A new feature whose shape is not yet agreed is designed with the user first, before any code (a
+design or planning skill, if one is installed, such as superpowers' brainstorming and
+writing-plans). A plan that already exists is followed, not rewritten.
+
 ## 1. Plan
 
 ```bash
@@ -40,7 +54,15 @@ Load each skill only when its step starts (the Skill tool, or `$SK/<skill>/SKILL
 If a step marked run turns out not to apply (the feature does not touch that stack after all), skip
 it and say why.
 
+Inside each step: a test for each new behaviour first, seen failing, then the code; and every
+changed line traces to the request. Do not tidy, reformat or refactor neighbouring code; mention it
+instead. Remove only what your own change left unused.
+
 ## 3. Report
+
+**Evidence rule:** a step is **done** only when its evidence was produced in this session: the
+command that was run and what it printed (test counts, exit code, the report's path). A step whose
+result you did not see is **not verified**, never done. Report a failure as it is.
 
 One table: step, result (**done**, **skipped** why, **blocked** how to unblock, **failed** what
 broke) and evidence (files, test counts). Then suggest `/break` to prove it and `/flow` to record

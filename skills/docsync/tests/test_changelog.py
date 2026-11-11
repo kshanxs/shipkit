@@ -219,6 +219,16 @@ class CommandLine(Logs):
         self.assertEqual(result.returncode, 2)
         self.assertIn("no change log named backend; there are: root, api", result.stderr)
 
+    def test_a_fresh_project_with_no_log_skips_with_one_line(self) -> None:
+        (self.root / "CHANGELOG.md").unlink()
+        self.log.unlink()
+        result = self.run_script("add", "api", "fixed", "Invoices were charged twice")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stderr, "")
+        self.assertEqual(len(result.stdout.splitlines()), 1)
+        self.assertIn("no CHANGELOG.md yet", result.stdout)
+        self.assertFalse((self.root / "CHANGELOG.md").exists())
+
 
 if __name__ == "__main__":
     unittest.main()

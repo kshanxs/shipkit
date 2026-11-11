@@ -100,6 +100,15 @@ class OpenQuestions(unittest.TestCase):
             check=True, capture_output=True,
         )
 
+    def test_a_fresh_project_with_no_register_skips_with_one_line(self) -> None:
+        (self.root / "docs/open_questions.md").unlink()
+        for args in ((), ("--list",), ("--changed",)):
+            done = self.run_script(*args)
+            self.assertEqual(done.returncode, 0, done.stdout + done.stderr)
+            self.assertEqual(done.stderr, "")
+            self.assertEqual(len(done.stdout.splitlines()), 1, done.stdout)
+            self.assertIn("docs/open_questions.md does not exist yet; nothing to check", done.stdout)
+
     def test_a_sound_register_passes(self) -> None:
         done = self.run_script()
         self.assertEqual(done.returncode, 0, done.stdout)

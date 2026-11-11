@@ -309,6 +309,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"wrote {target}; edit it to name your modules, seed files and personas")
         return 0
 
+    if load_config() is None:
+        print(f"seedbed: no scenario config yet ({os.path.relpath(config_path(), ROOT)}); nothing to check. Start one with check_seeds.py --init")
+        return 0
     report = Report()
     run_checks(report)
     cfg = load_config() or {}

@@ -137,6 +137,9 @@ attack log, and the two matrices.
 - Severity: Critical (cross-tenant read or write, auth bypass, a session as someone else, money
   lost), High (privilege escalation inside a tenant, personal data leak, double-charge race),
   Medium (500, wrong data, an unbounded query), Low (hardening, logging).
+- Suggested fix: name the root cause (why it happens, at which line), not only the symptom, and
+  say whether the same cause can break anything else; a fix that only guards one caller is marked
+  as partial.
 - Pre-conclusion audit: the files read, each checklist item clean or with a finding, the matrix
   cells tried, and what could not be verified and why.
 

@@ -13,6 +13,10 @@ that failed before the fix.
   command and what it printed are.
 - **A flaw is a failing test first.** Write the test that shows it, watch it fail, fix the cause,
   watch it pass, keep it. A test that has never failed has not shown it can catch anything.
+- **Fix the cause, not the symptom.** Before a fix, say why the flaw happens (the line, the
+  missing constraint, the shared state) and test one hypothesis at a time. If three fixes for the
+  same flaw have failed, stop patching: report it as a design problem (what keeps breaking, where)
+  and ask before a fourth attempt.
 
 `$SK` is the skills folder this skill is installed in. Works with stack-backend (how the API is
 built and tested), docsync (a flaw found is a bug: its number, its register row, its changelog
@@ -95,7 +99,7 @@ Write these into the project's test matrix with the project's own words.
 
 | Need | Use |
 |---|---|
-| Every record route aimed at another tenant | `isolation_sweep.py --config sweep.toml [--writes] [--dry-run]`: reads the OpenAPI document; prints each 2xx for the attacker as a CANDIDATE |
+| Every record route aimed at another tenant | `isolation_sweep.py --config sweep.toml [--writes] [--dry-run] [--base-url URL]`: reads the OpenAPI document; prints each 2xx for the attacker as a CANDIDATE |
 | Hostile input on one route, and a burst on it | `adversarial_runner.py --url ... --fuzz` and `--concurrency 20 --requests 200` (this machine only unless `--allow-host`) |
 | Requests that really race | Each request on its own session and connection, held at a gate until all have read: [concurrency recipes](references/concurrency_recipes.md) |
 | A dependency failing | Patch the call to raise (cache, email, payment); safe helpers must degrade, critical ones fail visibly |
