@@ -15,6 +15,7 @@ SKILLS = sorted(p.parent for p in (REPO / "skills").glob("*/SKILL.md"))
 EXPECTED = {
     "stack-backend", "stack-web", "stack-native", "wire-api", "seedbed", "fanout", "harden", "bug-sweep",
     "load-sim", "perf-watch", "triage-report", "ship-check", "docsync", "feature-map", "open-loops", "handoff", "switchboard",
+    "kit-build", "kit-break", "kit-flow", "kit-feature", "autopilot",
 }  # fmt: skip
 
 
@@ -30,7 +31,7 @@ def frontmatter(path: Path) -> dict[str, str]:
 
 
 class Layout(unittest.TestCase):
-    def test_the_seventeen_skills_are_there(self) -> None:
+    def test_the_skills_and_kits_are_there(self) -> None:
         self.assertEqual({p.name for p in SKILLS}, EXPECTED)
 
     def test_each_skill_has_frontmatter_a_readme_and_no_broken_reference_links(self) -> None:
@@ -61,7 +62,7 @@ class Layout(unittest.TestCase):
         for name, entry in table.items():
             self.assertIn(f"[{name}](skills/{name}/)", readme)
             self.assertIn(f"`/{entry['short'][0]}`", readme)
-        for group in ("Build", "Break & Test", "Docs & Flow"):
+        for group in ("Build", "Break & Test", "Docs & Flow", "Kits"):
             self.assertIn(f"### {group}", readme)
 
     def test_scripts_are_standard_library_python(self) -> None:
