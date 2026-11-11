@@ -111,6 +111,22 @@ class ShipCheck(unittest.TestCase):
         self.assertEqual(checked.returncode, 0, checked.stdout)
         self.assertNotIn("<sha>", checked.stdout)
 
+    def test_a_folder_that_is_not_a_git_checkout_says_so_and_passes(self) -> None:
+        plain = tempfile.TemporaryDirectory()
+        self.addCleanup(plain.cleanup)
+        root = Path(plain.name)
+        (root / "package.json").write_text('{"name": "vite-app"}\n')
+        env = {**os.environ, "SHIPKIT_ROOT": str(root), "GIT_CEILING_DIRECTORIES": str(root.parent)}
+        made = subprocess.run([sys.executable, str(SCRIPT), "scaffold", "--out", "report.md"], capture_output=True, text=True, cwd=root, env=env)
+        self.assertEqual(made.returncode, 0, made.stderr)
+        text = (root / "report.md").read_text()
+        self.assertIn("Audited: not a git checkout (no branch or SHA to record), on ", text)
+        self.assertNotIn("`unknown`", text)
+        checked = subprocess.run([sys.executable, str(SCRIPT), "check", "report.md"], capture_output=True, text=True, cwd=root, env=env)
+        self.assertEqual(checked.returncode, 0, checked.stdout)
+        self.assertIn("note: report.md audits a folder with no git history; there is no head SHA to record", checked.stdout)
+        self.assertNotIn("head SHA audited is not written", checked.stdout)
+
     def test_init_copies_the_checklist_and_scaffold_uses_it(self) -> None:
         self.assertEqual(self.run_script("init").returncode, 0)
         path = self.root / "ship-check.toml"

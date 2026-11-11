@@ -12,8 +12,9 @@ shipkit.toml; without one, the skill's references/checklist.example.toml (generi
 Status words: DONE, PARTIAL, MISSING, UNKNOWN (never guessed). Capabilities: PRESENT, PARTIAL,
 MISSING, UNKNOWN. `check` exits 1 when a row's status is not one of the words, a DONE, PARTIAL or
 PRESENT row cites no path, a cited path does not exist or is an installed skill, the head SHA (or
-"no commits yet") is missing, or the report has no top-five list. Installed skill folders (.claude/,
-.agents/, .trae/, and any folder shipkit installed) are never project evidence.
+"no commits yet", or "not a git checkout") is missing, or the report has no top-five list.
+Installed skill folders (.claude/, .agents/, .trae/, and any folder shipkit installed) are never
+project evidence.
 """
 
 from __future__ import annotations
@@ -35,6 +36,7 @@ NEEDS_EVIDENCE = {"DONE", "PARTIAL", "PRESENT"}
 PRUNE = {".git", "node_modules", ".venv", "venv", "dist", "build", "__pycache__", ".next", ".expo", "coverage"}
 INSTALLED = {".claude", ".agents", ".trae"}  # agents' skill folders: what shipkit installs, not the project
 NO_COMMITS = "no commits yet"
+NOT_GIT = "not a git checkout"
 
 
 def project_root() -> Path:
@@ -103,7 +105,7 @@ def scaffold(cfg: dict) -> str:
     elif git("rev-parse", "--git-dir"):
         audited = f"`{branch}`, {NO_COMMITS},"
     else:
-        audited = "`unknown` at `unknown (not a git checkout)`"
+        audited = f"{NOT_GIT} (no branch or SHA to record),"
     deploy = cfg.get("target", {}).get("deploy_branch", "main")
     product = cfg.get("product", {}).get("name", ROOT.name)
     behind = git("rev-list", "--count", f"{deploy}..HEAD") if git("rev-parse", "--verify", "--quiet", deploy) else ""
@@ -179,8 +181,9 @@ CITED = re.compile(r"`([^`\s]+?)(?::\d+(?:-\d+)?)?`")
 def check(report: Path) -> list[str]:
     text = report.read_text(encoding="utf-8")
     problems = []
-    if not re.search(r"`[0-9a-f]{7,40}`", text) and NO_COMMITS not in text.split("\n## ", 1)[0]:
-        problems.append(f"the head SHA audited is not written at the top (`<sha>`, or \"{NO_COMMITS}\")")
+    top = text.split("\n## ", 1)[0]
+    if not re.search(r"`[0-9a-f]{7,40}`", text) and NO_COMMITS not in top and NOT_GIT not in top:
+        problems.append(f"the head SHA audited is not written at the top (`<sha>`, \"{NO_COMMITS}\" or \"{NOT_GIT}\")")
     if "## Top 5 before launch" not in text:
         problems.append("no `## Top 5 before launch` section")
     section = ""
@@ -207,6 +210,18 @@ def check(report: Path) -> list[str]:
             elif installed(Path(path.rstrip("/"))):
                 problems.append(f"{report.name}:{number}: {found.group(1)} cites `{path}`, an installed skill, not project evidence")
     return problems
+
+
+def no_sha_note(report: Path) -> str:
+    """A line for a report that audits a folder with no commit to name, so a pass is not read as a SHA check."""
+    text = report.read_text(encoding="utf-8")
+    top = text.split("\n## ", 1)[0]
+    if re.search(r"`[0-9a-f]{7,40}`", text):
+        return ""
+    for words in (NOT_GIT, NO_COMMITS):
+        if words in top:
+            return f"note: {report.name} audits a folder with {'no git history' if words == NOT_GIT else 'no commits yet'}; there is no head SHA to record"
+    return ""
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -236,6 +251,9 @@ def main(argv: list[str] | None = None) -> int:
             print(text)
         return 0
     problems = check(Path(args.report))
+    note = no_sha_note(Path(args.report))
+    if note:
+        print(note)
     for problem in problems:
         print(problem)
     print(f"{args.report}: {len(problems)} problems")

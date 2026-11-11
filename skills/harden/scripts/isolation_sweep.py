@@ -16,7 +16,8 @@ For each route under `prefix` whose path names a record (a parameter called `id`
     in every id field. B must not get a 2xx.
 
 A 2xx for B is printed as a CANDIDATE: read it; some routes are not about a tenant's records.
-Exit status 1 when there is a candidate, 2 when the server cannot be reached (0 for --dry-run).
+Exit status 1 when there is a candidate, 2 when the server cannot be reached or the OpenAPI URL
+answers an HTTP error such as 401 (0 for --dry-run).
 --base-url overrides base_url, and an OpenAPI URL on the same server. The target must be this
 machine unless allow_hosts names a test server. Never production. The config (generic SaaS example, references/sweep.example.toml):
 
@@ -57,6 +58,14 @@ class Unreachable(Exception):
         self.url = url
 
 
+class Refused(Exception):
+    """The server answered the OpenAPI URL with an HTTP error (401, 403, 404, ...)."""
+
+    def __init__(self, url: str, status: int, reason: str) -> None:
+        super().__init__(f"{url} answered HTTP {status}{f' {reason}' if reason else ''}")
+        self.status = status
+
+
 def unreachable(error: BaseException) -> bool:
     """A connection failure, as opposed to an HTTP status (HTTPError is a URLError too)."""
     return isinstance(error, ConnectionError) or (isinstance(error, urllib.error.URLError) and not isinstance(error, urllib.error.HTTPError))
@@ -81,6 +90,8 @@ def load_openapi(source: str, base: Path) -> dict:
         try:
             with urllib.request.urlopen(source, timeout=20) as response:
                 return json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            raise Refused(source, error.code, str(error.reason or "")) from None
         except (urllib.error.URLError, ConnectionError) as error:
             if unreachable(error):
                 raise Unreachable(source, getattr(error, "reason", error)) from None
@@ -193,6 +204,10 @@ def main(argv: list[str] | None = None) -> int:
         return sweep(args)
     except Unreachable as error:
         print(f"isolation_sweep: {error}. Start the server, or pass --base-url to point at where it runs.")
+        return 0 if args.dry_run else 2
+    except Refused as error:
+        hint = "it needs a login: export the document to a file and set openapi to its path" if error.status in (401, 403) else "check the openapi URL"
+        print(f"isolation_sweep: {error}; {hint}, or pass --base-url if this is the wrong server.")
         return 0 if args.dry_run else 2
 
 

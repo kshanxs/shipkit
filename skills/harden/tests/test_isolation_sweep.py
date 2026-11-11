@@ -52,6 +52,20 @@ class Api(BaseHTTPRequestHandler):
     do_GET = do_PATCH = reply
 
 
+class SignedOut(BaseHTTPRequestHandler):
+    """Every request, /openapi.json included, needs a login this sweep does not send."""
+
+    def log_message(self, *args) -> None:
+        return
+
+    def do_GET(self) -> None:
+        body = b'{"code": "NOT_SIGNED_IN"}'
+        self.send_response(401)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+
 def free_port() -> int:
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
@@ -84,8 +98,8 @@ class Sweep(unittest.TestCase):
         return code, out.getvalue()
 
     @contextlib.contextmanager
-    def api(self):
-        server = ThreadingHTTPServer(("127.0.0.1", self.port), Api)
+    def api(self, handler: type[BaseHTTPRequestHandler] = Api):
+        server = ThreadingHTTPServer(("127.0.0.1", self.port), handler)
         threading.Thread(target=server.serve_forever, daemon=True).start()
         try:
             yield
@@ -125,6 +139,22 @@ class Sweep(unittest.TestCase):
         code, out = self.cli()
         self.assertEqual(code, 2, out)
         self.assertIn(f"cannot reach {url}/openapi.json", out)
+
+    def test_an_openapi_url_that_answers_401_is_one_clear_line_never_exit_1(self) -> None:
+        url = f"http://127.0.0.1:{self.port}/openapi.json"
+        self.config.write_text(self.config.read_text().replace('openapi = "openapi.json"', f'openapi = "{url}"'))
+        with self.api(SignedOut):
+            dry_code, dry = self.cli("--dry-run")
+            real_code, real = self.cli()
+        self.assertEqual(dry_code, 0, dry)
+        self.assertEqual(real_code, 2, real)
+        for out in (dry, real):
+            self.assertEqual(len(out.strip().splitlines()), 1, out)
+            self.assertIn(f"{url} answered HTTP 401", out)
+            self.assertIn("needs a login", out)
+            self.assertIn("--base-url", out)
+            self.assertNotIn("Traceback", out)
+            self.assertNotIn("HTTPError", out)
 
     def test_no_server_on_a_real_run_with_a_file_spec_stops_at_the_first_request(self) -> None:
         code, out = self.cli()
