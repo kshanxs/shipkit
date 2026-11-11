@@ -50,9 +50,30 @@ only to what it has.
 | Docs & Flow | open-loops | `/loops`, `/oq` |
 | Docs & Flow | handoff | `/handoff` |
 | Docs & Flow | switchboard | `/sb`, `/route` |
+| Kits | kit-build | `/build` |
+| Kits | kit-break | `/break`, `/bt` |
+| Kits | kit-flow | `/flow` |
+| Kits | kit-feature | `/feature` |
+| Kits | autopilot | `/shipkit`, `/auto` |
 
 Each command file says "use the `<skill>` skill for this request" and passes the arguments on. In
 agents without slash commands, write `@<short>` in the message instead.
+
+## Kits and the autopilot
+
+A kit runs a group's skills in order; the autopilot picks the kits that fit. Both are decided by
+`scripts/kit.py` from [kits.toml](kits.toml) and the repository's state, never guessed:
+
+```bash
+K="python3 $SK/switchboard/scripts/kit.py"
+$K plan break --tier full        # each step: run, skip (why) or blocked (what is missing)
+$K plan flow --mode start
+$K auto --request "run shipkit"  # Now / Ready when you want / Not now
+$K facts                         # what the decisions rest on: changes, commits, schema, load target
+$K members kit-break             # the skills a kit needs (install.sh --skills kit-break brings them)
+```
+
+A named kit or the autopilot comes alone: it picks its own skills, so the router adds none.
 
 ## Where things go
 

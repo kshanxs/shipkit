@@ -3,11 +3,13 @@
 # 🚢 shipkit
 
 **Seventeen stack-agnostic skills that teach coding agents to build, break, test, document and hand
-off work on real projects.**
+off work on real projects, four kits that run a whole group in one command, and an autopilot that
+picks what to run.**
 
 [![test](https://github.com/kshanxs/shipkit/actions/workflows/test.yml/badge.svg)](https://github.com/kshanxs/shipkit/actions/workflows/test.yml)
 ![skills](https://img.shields.io/badge/skills-17-6d5dfc)
-![commands](https://img.shields.io/badge/slash%20commands-32-0ea5e9)
+![kits](https://img.shields.io/badge/kits-4%20%2B%20autopilot-f97316)
+![commands](https://img.shields.io/badge/slash%20commands-39-0ea5e9)
 ![python](https://img.shields.io/badge/python-3.11%2B%20stdlib-3776ab)
 ![dependencies](https://img.shields.io/badge/dependencies-none-22c55e)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -18,7 +20,7 @@ off work on real projects.**
 ![Trae](https://img.shields.io/badge/Trae-ff4b4b)
 · on **uv/Python**, **Vite**, **Vite+** and **React Native**
 
-[Skills](#skills) · [How they work](#how-the-skills-work) · [Install](#install) ·
+[Skills](#skills) · [Kits](#kits) · [How they work](#how-the-skills-work) · [Install](#install) ·
 [Slash commands](#slash-commands) · [Configure](#configure) · [Develop](#develop)
 
 </div>
@@ -96,6 +98,73 @@ flowchart LR
 | [open-loops](skills/open-loops/) | `/loops` | The open questions register, with what the code does today, what each answer changes, and code anchors that are checked when the code moves |
 | [handoff](skills/handoff/) | `/handoff` | `HANDOFF.md`, the memory between agent sessions: read first, one work log row and updated sections last; Notion as an optional adapter |
 | [switchboard](skills/switchboard/) | `/sb` | The router: picks the skills a request needs, runs as a Claude Code hook, writes the slash commands and the AGENTS.md table |
+
+### Kits
+
+One command per group. A kit runs its group's skills **in order**, and runs only what fits the
+repository **right now**: each step comes out as run, skip (does not apply, and why) or blocked
+(applies, but cannot run yet, and what to do about it).
+
+| Kit | Command | What it runs |
+|---|---|---|
+| [kit-build](skills/kit-build/) | `/build` | handoff and open-loops, fanout when the work is parallel, then only the stack skills the work touches, wire-api when an API and a screen both change, seedbed when the data model changes; each stack's tests gate the next step |
+| [kit-break](skills/kit-break/) | `/break` | **quick** (default): harden the changed areas, bug-sweep the new commits, one triage report · **full**: + load-sim with perf-watch on the local stack · **launch**: + ship-check |
+| [kit-flow](skills/kit-flow/) | `/flow` | end of a session: docsync, feature-map, open-loops, a handoff log row · `/flow start`: read the handoff and the open questions |
+| [kit-feature](skills/kit-feature/) | `/feature` | build, then break (quick), then flow: a feature from request to recorded |
+| [autopilot](skills/autopilot/) | `/shipkit` | say "run shipkit" and nothing else: it reads the repository, decides which kits and skills fit now, runs them, and says what cannot run yet and why |
+
+```mermaid
+flowchart LR
+    you(["🗣️ run shipkit"]) --> auto["🧭 autopilot<br/>kit.py auto"]
+    auto --> state[("📂 the repository now<br/>changes · commits · schema<br/>registers · local stack")]
+    state --> auto
+    auto --> now["▶️ Now"]
+    auto --> ready["🕐 Ready when you want"]
+    auto --> notnow["⛔ Not now + why"]
+    now --> kits
+    subgraph kits["Kits: each plans its own steps"]
+        direction TB
+        build["/build"]
+        brk["/break"]
+        flow["/flow"]
+        feat["/feature = build → break → flow"]
+    end
+```
+
+How the autopilot decides (the first that fits):
+
+| The repository or the request says | Now |
+|---|---|
+| a skill or kit is named | that one |
+| launching | `/break launch` |
+| a session starting, or ending | `/flow start`, or `/flow` |
+| new work ("add invoices with a list screen") | `/feature` |
+| code changed and is not proven | `/break`, `/seed` if the schema changed, then `/flow` |
+| only docs changed | `/flow` |
+| nothing changed | `/flow start` |
+
+`/break full` is offered only when `load-scenario.toml` points at this machine and the stack
+answers; anywhere else it is held back with the reason. Nothing runs against production.
+
+```bash
+python3 skills/switchboard/scripts/kit.py auto                       # what fits now
+python3 skills/switchboard/scripts/kit.py plan break --tier full     # one kit's steps, without running them
+```
+
+```text
+kit: break (full)
+
+ 1. ✅ run       harden         test first, then break the changed areas; every flaw a failing test, then the fix
+                               └ 4 changed code files against origin/main
+ 2. ✅ run       bug-sweep      review the new commits (full: and sweep one area); verify before reporting
+                               └ 2 new commits on this branch
+ 3. ⛔ blocked   load-sim       many tenants' real usage on the local stack; thresholds pass or fail
+                               └ nothing answers at http://localhost:8000: start the local stack on a scratch database
+ 4. ⛔ blocked   perf-watch     collect latency, slow queries, pool, CPU and memory while load-sim runs
+                               └ nothing answers at http://localhost:8000: start the local stack on a scratch database
+ 5. ✅ run       triage-report  one severity-ranked report of everything above
+                               └ one report from harden, bug-sweep
+```
 
 ## How the skills work
 
@@ -232,8 +301,12 @@ Requirements: `bash` and Python 3.11+ (`tomllib`). Node, uv or Expo only where t
 | `/seed` seedbed | `/triage` `/report` triage-report | `/sb` `/route` switchboard |
 | `/fanout` `/par` fanout | `/ship` `/ready` ship-check | |
 
+| Kits |
+|---|
+| `/build` kit-build · `/break` `/bt` kit-break · `/flow` kit-flow · `/feature` kit-feature · `/shipkit` `/auto` autopilot |
+
 Every command is `/<short> <what to do>`, for example `/harden the checkout endpoint against double
-submit`. In agents without slash commands, write `@<short>` in the message.
+submit` or `/break full`. In agents without slash commands, write `@<short>` in the message.
 
 ## Configure
 
