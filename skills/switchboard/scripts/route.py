@@ -106,6 +106,11 @@ def by_handle(skills: dict[str, Skill]) -> dict[str, Skill]:
 PATH_TOKEN = re.compile(r"[\w.@-]+(?:/[\w.@*-]+)+/?")
 
 
+def is_orchestrator(name: str) -> bool:
+    """Kits (kit-build, kit-break, ...) and the autopilot run other skills; named, they come alone."""
+    return name.startswith("kit-") or name == "autopilot"
+
+
 def named_in(text: str, skills: dict[str, Skill]) -> list[tuple[Skill, str]]:
     """@handle anywhere, or /handle at the very start (a Claude Code command)."""
     handles = by_handle(skills)
@@ -124,6 +129,8 @@ def route(text: str, skills: dict[str, Skill] | None = None) -> list[Pick]:
     picks: dict[str, Pick] = {}
     for skill, how in named_in(text, skills):
         picks.setdefault(skill.name, Pick(skill, [f"named ({how})"], named=True))
+    if any(is_orchestrator(name) for name in picks):
+        return list(picks.values())  # a kit or the autopilot picks its own skills (kit.py)
 
     scored: list[tuple[int, Pick]] = []
     tokens = [t.strip("`'\"()[],.:;") for t in PATH_TOKEN.findall(text)]

@@ -50,6 +50,8 @@ class Install(unittest.TestCase):
             ("load-sim/scripts/sim.py", ["plan", "--scenario", str(self.target / ".claude/skills/load-sim/references/scenario.example.toml"), "--profile", "peak", "--count", "3"]),
             ("ship-check/scripts/ship_check.py", ["scaffold"]),
             ("switchboard/scripts/route.py", ["add an endpoint for invoices"]),
+            ("switchboard/scripts/kit.py", ["plan", "break", "--tier", "full"]),
+            ("switchboard/scripts/kit.py", ["auto", "--request", "run shipkit"]),
         ):
             done = subprocess.run([sys.executable, str(self.target / ".claude/skills" / script), *args], capture_output=True, text=True, cwd=self.target, env=env)
             self.assertEqual(done.returncode, 0, f"{script}: {done.stdout}{done.stderr}")
@@ -60,6 +62,13 @@ class Install(unittest.TestCase):
         names = sorted(p.parent.name for p in (self.target / ".agents/skills").glob("*/SKILL.md"))
         self.assertEqual(names, ["docsync", "harden", "switchboard"])
         self.assertFalse((self.target / ".claude").exists())
+
+    def test_a_kit_brings_the_skills_it_runs(self) -> None:
+        result = install(self.target, "--claude", "--skills", "kit-break")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        names = sorted(p.parent.name for p in (self.target / ".claude/skills").glob("*/SKILL.md"))
+        self.assertEqual(names, ["bug-sweep", "docsync", "harden", "kit-break", "load-sim", "perf-watch", "ship-check", "switchboard", "triage-report"])
+        self.assertTrue((self.target / ".claude/commands/break.md").exists())
 
     def test_link_makes_claude_and_trae_point_at_agents(self) -> None:
         result = install(self.target, "--all", "--link")
