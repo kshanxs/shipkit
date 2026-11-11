@@ -13,6 +13,8 @@
 #   when    the condition kit.py checks (see CONDITIONS in kit.py)
 #   tier    break only: the lowest tier that runs it (quick < full < launch); default quick
 #   mode    flow only: "start" (session start) or "end" (session end); default end
+#   needs   traits the project profile must have, or the step is skipped ([project] in shipkit.toml,
+#           else detected; `project.py --help` lists the traits; "!money" means "takes no money")
 #
 # A kit's own skill (kit-build, ...) is the playbook an agent follows; this file is what it runs.
 
@@ -36,8 +38,8 @@ title = "Prove it: test first, break it, report"
 steps = [
   { skill = "harden", do = "test first, then break the changed areas; every flaw a failing test, then the fix", when = "code_changes" },
   { skill = "bug-sweep", do = "review the new commits (full: and sweep one area); verify before reporting", when = "sweep_target" },
-  { skill = "load-sim", do = "many tenants' real usage on the local stack; thresholds pass or fail", when = "load_ready", tier = "full" },
-  { skill = "perf-watch", do = "collect latency, slow queries, pool, CPU and memory while load-sim runs", when = "load_ready", tier = "full" },
+  { skill = "load-sim", do = "many tenants' real usage on the local stack; thresholds pass or fail", when = "load_ready", tier = "full", needs = ["multi-tenant"] },
+  { skill = "perf-watch", do = "collect latency, slow queries, pool, CPU and memory while load-sim runs", when = "load_ready", tier = "full", needs = ["multi-tenant"] },
   { skill = "ship-check", do = "read-only launch-readiness audit; blockers and the top five", when = "always", tier = "launch" },
   { skill = "triage-report", do = "one severity-ranked report of everything above", when = "report_due" },
 ]
@@ -49,7 +51,7 @@ steps = [
   { skill = "handoff", do = "read where the last session left off", when = "handoff_file", mode = "start" },
   { skill = "open-loops", do = "the questions waiting on the owner", when = "open_loops_register", mode = "start" },
   { skill = "docsync", do = "changelogs, specs and the tracker for this change; check_docs.py --changed", when = "docs_present" },
-  { skill = "feature-map", do = "move what was built; recount; keep the pricing page in step", when = "feature_catalog" },
+  { skill = "feature-map", do = "move what was built; recount; keep the pricing page in step (priced plans only)", when = "feature_catalog" },
   { skill = "open-loops", do = "update the questions this change touched (open_loops.py --changed)", when = "open_loops_register" },
   { skill = "handoff", do = "one work log row; update Now, Next up, Waiting and Blocked", when = "handoff_end" },
 ]

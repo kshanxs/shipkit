@@ -2,14 +2,14 @@
 
 # 🚢 shipkit
 
-**Seventeen stack-agnostic skills that teach coding agents to build, break, test, document and hand
+**Eighteen stack-agnostic skills that teach coding agents to build, break, test, document and hand
 off work on real projects, four kits that run a whole group in one command, and an autopilot that
 picks what to run.**
 
 [![test](https://github.com/kshanxs/shipkit/actions/workflows/test.yml/badge.svg)](https://github.com/kshanxs/shipkit/actions/workflows/test.yml)
-![skills](https://img.shields.io/badge/skills-17-6d5dfc)
+![skills](https://img.shields.io/badge/skills-18-6d5dfc)
 ![kits](https://img.shields.io/badge/kits-4%20%2B%20autopilot-f97316)
-![commands](https://img.shields.io/badge/slash%20commands-39-0ea5e9)
+![commands](https://img.shields.io/badge/slash%20commands-41-0ea5e9)
 ![python](https://img.shields.io/badge/python-3.11%2B%20stdlib-3776ab)
 ![dependencies](https://img.shields.io/badge/dependencies-none-22c55e)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -30,8 +30,10 @@ picks what to run.**
 Each skill is a folder with a `SKILL.md` (the instructions the agent follows), a short `README.md`,
 and where it helps, standard-library Python scripts, references and tests. Nothing about a
 particular product is baked in: paths, tiers, scenarios and checklists come from one `shipkit.toml`
-in your project, and the defaults are a generic multi-tenant SaaS app (workspaces, members, projects,
-billing).
+in your project, which the installer writes from what the project is, and the [profile](skills/profile/)
+skill checks. Its `[project]` table (kind, tenancy, money, plans, auth, surfaces) decides what runs:
+a self-hosted tool never gets billing checks, a library never gets a many-tenant load test, and a
+multi-tenant SaaS with payments gets all of it.
 
 ```mermaid
 flowchart LR
@@ -60,6 +62,7 @@ flowchart LR
         loops["open-loops"]
         hand["handoff"]
         sb["switchboard"]
+        prof["profile"]
     end
     build --> test --> flow
     flow -. "next session" .-> build
@@ -98,6 +101,7 @@ flowchart LR
 | [open-loops](skills/open-loops/) | `/loops` | The open questions register, with what the code does today, what each answer changes, and code anchors that are checked when the code moves |
 | [handoff](skills/handoff/) | `/handoff` | `HANDOFF.md`, the memory between agent sessions: read first, one work log row and updated sections last; Notion as an optional adapter |
 | [switchboard](skills/switchboard/) | `/sb` | The router: picks the skills a request needs, runs as a Claude Code hook, writes the slash commands and the AGENTS.md table |
+| [profile](skills/profile/) | `/profile` | Fills in `shipkit.toml` from the project: detects its kind, tenants, money, plans, auth, surfaces, code folders and ports, checks every guess in the code, asks only what is left, and writes the profile every skill runs by |
 
 ### Kits
 
@@ -260,7 +264,7 @@ flowchart LR
     inst["⚙️ install.sh"] --> claude[".claude/skills/<br/>+ .claude/commands/"]
     inst --> agents[".agents/skills/<br/>+ AGENTS.md table"]
     inst --> trae[".trae/skills/"]
-    inst --> toml["shipkit.toml<br/><i>only if missing</i>"]
+    inst --> toml["shipkit.toml<br/><i>detected from the project,<br/>only if missing</i>"]
     inst -. "--hooks" .-> settings[".claude/settings.json<br/>router + docsync stop hook"]
     inst --> check{"every skill and<br/>command resolves?"}
     check -- yes --> ok(["✅ installed"])
@@ -269,19 +273,22 @@ flowchart LR
 
 | Option | Does |
 |---|---|
-| `--skills a,b` | Only these skills (the switchboard is always added) |
+| `--skills a,b` | Only these skills (the switchboard and profile are always added) |
 | `--link` | `.claude` and `.trae` become symlinks to `.agents/skills` (one copy to update) |
 | `--hooks` | Adds the router (`UserPromptSubmit`) and the docsync stop hook to `.claude/settings.json` |
 | `--force` | Replaces a skill folder shipkit did not install (otherwise it is skipped) |
 | `--no-config` | Does not write `shipkit.toml` |
+| `--preset saas` | Writes the generic multi-tenant SaaS example instead of detecting the project |
 | `--dry-run` | Shows what it would do |
 
-The installer copies each skill without its tests, writes `shipkit.toml` from
-[shipkit.example.toml](shipkit.example.toml) if the project has none, writes the slash commands and
-the AGENTS.md table, and finishes by checking that every skill and command resolves. Re-run it to
-update. By hand: copy `skills/<name>/` into `<project>/.claude/skills/` (or `.agents/skills/`,
-`.trae/skills/`), copy `skills/switchboard/commands/*.md` into `<project>/.claude/commands/`, and
-copy `shipkit.example.toml` to `<project>/shipkit.toml`.
+The installer copies each skill without its tests, writes `shipkit.toml` from what the project is
+(`project.py write`) if the project has none, writes the slash commands and the AGENTS.md table, and
+finishes by checking that every skill and command resolves. Then ask your agent for `/profile` (or
+`@profile`): it checks the detected values that are guesses against the code and asks only what the
+code cannot answer. Re-run the installer to update. By hand: copy `skills/<name>/` into
+`<project>/.claude/skills/` (or `.agents/skills/`, `.trae/skills/`), copy
+`skills/switchboard/commands/*.md` into `<project>/.claude/commands/`, and run
+`python3 <project>/.claude/skills/switchboard/scripts/project.py write`.
 
 > [!TIP]
 > Skills can also be installed once for every project, as symlinks into `~/.claude/skills/` (or
@@ -299,7 +306,7 @@ Requirements: `bash` and Python 3.11+ (`tomllib`). Node, uv or Expo only where t
 | `/native` `/rn` `/mobile` stack-native | `/load` `/sim` load-sim | `/loops` `/oq` open-loops |
 | `/wire` wire-api | `/perf` `/mon` perf-watch | `/handoff` handoff |
 | `/seed` seedbed | `/triage` `/report` triage-report | `/sb` `/route` switchboard |
-| `/fanout` `/par` fanout | `/ship` `/ready` ship-check | |
+| `/fanout` `/par` fanout | `/ship` `/ready` ship-check | `/profile` `/configure` profile |
 
 | Kits |
 |---|
@@ -310,14 +317,35 @@ submit` or `/break full`. In agents without slash commands, write `@<short>` in 
 
 ## Configure
 
-One file, `shipkit.toml`, at the project root ([the generic SaaS example](shipkit.example.toml)).
+One file, `shipkit.toml`, at the project root, written from the project by `project.py write` and
+checked by `/profile` ([every table, as the multi-tenant SaaS preset](shipkit.example.toml)).
+
+The `[project]` table is the profile every skill runs by. A value set there wins; a value left out
+is detected; nothing undetected is assumed:
+
+| Key | Values |
+|---|---|
+| `kind` | `saas`, `self-hosted`, `app`, `cli`, `library`, `infra`, `container-app` |
+| `tenancy` | `none`, `single-user`, `multi-user`, `multi-tenant` |
+| `money` | `none`, `payments` |
+| `plans` | `none`, `tiers` (priced plans) |
+| `auth` | `none`, `local`, `accounts` |
+| `surfaces` | any of `api`, `web`, `native`, `cli`, `shell`, `container`, `library` |
+| `offline` | `true`, `false` |
+
+Kit steps (`needs` in kits.toml), ship-check items (`requires`) and skill sections marked
+**[money]**, **[multi-tenant]**, **[plans]**, **[self-hosted]** apply only when the profile has the
+trait. `python3 <skills>/switchboard/scripts/project.py show` prints the profile;
+`project.py has money` answers yes or no.
+
 Two skills also take their own scenario files: `seedbed.toml` (seed modules, scenarios, personas)
 and `load-scenario.toml` (traffic); both have an `init` command that writes the generic example.
 ship-check takes an optional `ship-check.toml` checklist.
 
 ```mermaid
 flowchart LR
-    toml["📄 shipkit.toml"] --> stack["[stack]<br/>api, web and native dirs"]
+    toml["📄 shipkit.toml"] --> proj["[project]<br/>kind, tenancy, money, plans"]
+    toml --> stack["[stack]<br/>api, web and native dirs"]
     toml --> docsync["[docsync]<br/>docs, packages, registers"]
     toml --> hardent["[harden]<br/>matrix + axes"]
     toml --> loopst["[open_loops]<br/>register"]

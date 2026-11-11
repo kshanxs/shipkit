@@ -5,10 +5,13 @@ its rules. Read-only on the code: it never builds or fixes anything. Standard li
 
     python3 ship_check.py scaffold [--out ship-check-report.md]   # the report's skeleton, with files to read per item
     python3 ship_check.py check ship-check-report.md               # every status a word, every claim a real path
-    python3 ship_check.py init                                     # write ship-check.toml (the generic SaaS checklist)
+    python3 ship_check.py init                                     # write ship-check.toml (the checklist; items not in the profile are left out)
 
 The checklist is `ship-check.toml` at the project root, or the path in `[ship_check] checklist` of
-shipkit.toml; without one, the skill's references/checklist.example.toml (generic SaaS) is used.
+shipkit.toml; without one, the skill's references/checklist.example.toml is used. A group or item
+with `requires = [...]` is kept only when the project profile has those traits ([project] in
+shipkit.toml, else detected by the switchboard's project.py): a self-hosted tool is not asked about
+billing operations, a library is not asked about backups. The scaffold lists what it left out.
 Status words: DONE, PARTIAL, MISSING, UNKNOWN (never guessed). Capabilities: PRESENT, PARTIAL,
 MISSING, UNKNOWN. `check` exits 1 when a row's status is not one of the words, a DONE, PARTIAL or
 PRESENT row cites no path, a cited path does not exist, the head SHA is missing, or the report has
@@ -59,6 +62,31 @@ def checklist_path() -> Path:
     return own if own.is_file() else SKILL / "references" / "checklist.example.toml"
 
 
+def load_profile():
+    """The project profile from the switchboard's project.py, or None when it is not installed (keep everything)."""
+    scripts = SKILL.parent / "switchboard" / "scripts"
+    if not (scripts / "project.py").is_file():
+        return None
+    sys.path.insert(0, str(scripts))
+    try:
+        import project  # noqa: PLC0415
+
+        return project.profile(ROOT)
+    except Exception:  # noqa: BLE001 - an unreadable profile keeps the whole checklist
+        return None
+    finally:
+        sys.path.remove(str(scripts))
+
+
+def applies(entry: object, profile, left_out: list[str]) -> bool:
+    needs = entry.get("requires", []) if isinstance(entry, dict) else []
+    if not needs or profile is None or profile.has(*needs):
+        return True
+    name = entry.get("name") or entry.get("group") or "pricing"  # type: ignore[union-attr]
+    left_out.append(f"{name} (needs {', '.join(needs)})")
+    return False
+
+
 def git(*args: str) -> str:
     done = subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True)
     return done.stdout.strip() if done.returncode == 0 else ""
@@ -85,11 +113,24 @@ def hint_text(patterns: list[str]) -> str:
     return ", ".join(f"`{h}`" for h in hits) if hits else "nothing matched; look by hand"
 
 
-def scaffold(cfg: dict) -> str:
+def scaffold(cfg: dict, profile=None) -> str:
+    left_out: list[str] = []
+    cfg = dict(cfg)
+    for key in ("capabilities", "flows"):
+        cfg[key] = [i for i in cfg.get(key, []) if applies(i, profile, left_out)]
+    groups = []
+    for group in cfg.get("checklist", []):
+        if applies(group, profile, left_out):
+            items = [i for i in group.get("items", []) if applies(i, profile, left_out)]
+            if items:
+                groups.append({**group, "items": items})
+    cfg["checklist"] = groups
+    if cfg.get("pricing") and not applies(cfg["pricing"], profile, left_out):
+        cfg["pricing"] = {}
     sha = git("rev-parse", "HEAD") or "unknown (not a git checkout)"
     branch = git("rev-parse", "--abbrev-ref", "HEAD") or "unknown"
     deploy = cfg.get("target", {}).get("deploy_branch", "main")
-    product = cfg.get("product", {}).get("name", ROOT.name)
+    product = cfg.get("product", {}).get("name") or ROOT.name
     behind = git("rev-list", "--count", f"{deploy}..HEAD") if git("rev-parse", "--verify", "--quiet", deploy) else ""
     lines = [
         f"# Launch readiness: {product}",
@@ -100,6 +141,12 @@ def scaffold(cfg: dict) -> str:
         "Read-only audit. Every claim cites a path (with a line where there is one); what could not be verified is UNKNOWN.",
         "Status words: DONE, PARTIAL, MISSING, UNKNOWN. Capabilities: PRESENT, PARTIAL, MISSING, UNKNOWN.",
         "",
+    ]
+    if profile is not None:
+        lines += [f"Profile: {profile.line()}", ""]
+    if left_out:
+        lines += ["Left out, not in this project's profile: " + "; ".join(left_out) + ".", ""]
+    lines += [
         "## Sources read",
         "",
     ]
@@ -210,7 +257,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.cmd == "scaffold":
         cfg = tomllib.loads(checklist_path().read_text(encoding="utf-8"))
-        text = scaffold(cfg)
+        text = scaffold(cfg, load_profile())
         if args.out:
             Path(args.out).write_text(text, encoding="utf-8")
             print(f"wrote {args.out} from {checklist_path()}")

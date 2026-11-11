@@ -11,6 +11,10 @@ scratch database only, test credentials only, outputs outside the repository (`s
 no commits, no secrets in output. The load cells it measures are in the harden skill's test matrix;
 findings go to triage-report.
 
+Sections about tenants (rows and p95 per tenant, tenant segments in keys, "Growth with the number
+of tenants") apply only when the project profile is multi-tenant (`project.py has multi-tenant`);
+otherwise measure growth with the size of the data instead.
+
 ## Start monitoring before the load, stop it after
 
 A snapshot at t0, a sample every 10 seconds during the run, a final snapshot. Save everything

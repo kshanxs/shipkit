@@ -9,6 +9,11 @@ Adapted from public load-testing skill patterns (grafana k6, perf analysis; Apac
 Builds on harden (its test matrix names the load cells) and seedbed; use perf-watch during a run
 and triage-report after it. `$SK` is the skills folder this skill is installed in.
 
+**Applies to multi-tenant projects.** Run `python3 $SK/switchboard/scripts/project.py has
+multi-tenant` first; when it says no, this simulation of many tenants does not fit the project:
+say so, and the kits skip it. For a single-user or multi-user server, a bounded burst with harden's
+`adversarial_runner.py --concurrency` answers "does it hold under load" without tenants.
+
 ## Hard rules (repeat them in every delegated agent's prompt)
 
 - A local stack or a named test server only, on a **scratch database**. Never production, a

@@ -19,6 +19,15 @@ import kit  # noqa: E402
 import route  # noqa: E402
 
 CONFIG = """
+[project]
+kind = "saas"
+tenancy = "multi-tenant"
+money = "payments"
+plans = "tiers"
+auth = "accounts"
+surfaces = ["api", "web"]
+offline = false
+
 [stack]
 api_dir = "apps/api"
 web_dirs = ["apps/web"]
@@ -237,3 +246,47 @@ class Wiring(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Profiles(Repo):
+    """The project profile decides which steps exist at all: no tenants, no many-tenant load test."""
+
+    SELF_HOSTED = CONFIG.replace('kind = "saas"', 'kind = "self-hosted"').replace('tenancy = "multi-tenant"', 'tenancy = "single-user"').replace(
+        'money = "payments"', 'money = "none"').replace('plans = "tiers"', 'plans = "none"')  # fmt: skip
+
+    def test_a_single_user_app_never_gets_a_many_tenant_load_test(self):
+        self.write("shipkit.toml", self.SELF_HOSTED)
+        with socket.socket() as server:
+            server.bind(("127.0.0.1", 0))
+            server.listen()
+            self.write("load-scenario.toml", f'[target]\nbase_url = "http://127.0.0.1:{server.getsockname()[1]}"\n')
+            steps = {s.skill: s for s in kit.plan("break", self.facts(), tier="full")}
+        self.assertEqual(steps["load-sim"].state, "skip")
+        self.assertIn("not multi-tenant", steps["load-sim"].reason)
+        self.assertEqual(steps["perf-watch"].state, "skip")
+        why = [x["why"] for x in kit.advise(self.facts()).not_now if x["run"] == "/break full"]
+        self.assertIn("single-user", why[0])
+
+    def test_without_a_project_table_the_autopilot_asks_for_the_profile_first(self):
+        self.write("shipkit.toml", CONFIG.split("[stack]")[1].join(["[stack]", ""]))
+        self.assertEqual(self.now()[0], "/profile")
+        self.write("shipkit.toml", CONFIG)
+        self.assertNotIn("/profile", self.now())
+
+    def test_stack_folders_come_from_the_repository_when_shipkit_toml_has_none(self):
+        self.write("shipkit.toml", "")
+        (self.root / "apps/api/pyproject.toml").write_text('[project]\nname = "api"\ndependencies = ["fastapi"]\n')
+        f = self.facts()
+        self.assertEqual(f.stacks["api"], "apps/api")
+        self.assertEqual(f.stacks["native"], "")
+        self.assertFalse(f.stack_exists("native"))
+        self.assertIn("profile", kit.Advice().__dataclass_fields__)
+
+
+class Installed(Repo):
+    def test_the_installed_skills_are_not_the_projects_changes(self):
+        self.write(".claude/skills/harden/SKILL.md")
+        self.write(".agents/skills/harden/scripts/matrix.py")
+        self.write(".claude/commands/break.md")
+        self.write("shipkit.toml", CONFIG + "\n")
+        self.assertEqual(self.facts().changed, [])

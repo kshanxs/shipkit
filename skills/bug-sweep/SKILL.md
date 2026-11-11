@@ -1,6 +1,6 @@
 ---
 name: bug-sweep
-description: "Review new commits, or sweep a whole branch area by area, for bugs, crashes, cross-tenant data leaks, permission gaps, offline and sync errors, race conditions, idempotency and money errors, starting from the test matrix's gaps; verify every finding before reporting it, and report through triage-report. Read-only on the remote. Use when asked to review new commits, hunt for bugs, sweep the codebase, find bugs, or penetration test the project."
+description: "Review new commits, or sweep a whole branch area by area, for bugs, crashes, cross-tenant data leaks, permission gaps, offline and sync errors, race conditions, idempotency and money errors, cross-site requests and DNS rebinding on self-hosted servers (only the kinds the project profile has), starting from the test matrix's gaps; verify every finding before reporting it, and report through triage-report. Read-only on the remote. Use when asked to review new commits, hunt for bugs, sweep the codebase, find bugs, or penetration test the project."
 ---
 
 # Bug sweep: new commits, a whole-branch sweep, and the matrix
@@ -16,6 +16,14 @@ Works with the harden skill's [test matrix](../harden/references/test_matrix.md)
 failing test and a fix), load-sim and perf-watch (what breaks at scale), and triage-report (the
 report). Project specifics live in the project's matrix and `[bug_sweep]` of `shipkit.toml`
 (`branch`, `areas`).
+
+## The project profile
+
+Run `python3 $SK/switchboard/scripts/project.py show` first (`$SK` is the skills folder this skill is
+installed in). An area or checklist item marked
+**[multi-tenant]**, **[money]**, **[accounts]**, **[offline]**, **[hosted]**, **[self-hosted]**,
+**[cli]** or **[shell]** applies only when the profile lists that trait: skip the others, and name
+what you skipped in the report's "not tried" list. Unmarked items apply to every project.
 
 ## Rules
 
@@ -55,25 +63,28 @@ $M coverage --missing  # cells nobody has tried; Critical-prone areas first
 
 Areas, a generic SaaS list; replace with your own under `[bug_sweep] areas`:
 
-| Area | Look at |
-|---|---|
-| Sign-in and identity | Sign-up, codes, sessions, refresh, second factor, invites, password reset, account linking |
-| Tenant context and dependencies | How the tenant is resolved and checked on every route |
-| Offline cache and sync | Outbox, idempotency keys, device time, sign-out wipe, shared devices |
-| Billing and money | Checkout, webhooks, refunds, reconciliation, plan changes, seats |
-| Core records | The main entities: create, edit, archive, delete, export |
-| Imports, exports and files | CSV import, exports, uploads, generated documents |
-| Search, reports and analytics | Global search, dashboards, cross-tenant aggregates |
-| Notifications and messages | Email, push, in-app, fan-out to large tenants |
-| Operator console and support access | Admin routes, impersonation, demo and test routes |
-| Background jobs and scale | Jobs crossing tenants, unbounded loops, per-request work that grows with tenants |
+| Area | Applies when | Look at |
+|---|---|---|
+| Sign-in and identity | **[accounts]** | Sign-up, codes, sessions, refresh, second factor, invites, password reset, account linking |
+| Access control | **[auth]** | The one password, token or API key: where it is checked, stored and compared; routes that skip it |
+| Tenant context and dependencies | **[multi-tenant]** | How the tenant is resolved and checked on every route |
+| Local network exposure | **[self-hosted]** | Bind address, Origin or CSRF checks on every change, the Host header (DNS rebinding), what answers without a password |
+| Offline cache and sync | **[offline]** | Outbox, idempotency keys, device time, sign-out wipe, shared devices |
+| Billing and money | **[money]** | Checkout, webhooks, refunds, reconciliation, plan changes, seats |
+| Core records | every project | The main entities or files: create, edit, archive, delete, export |
+| Imports, exports and files | every project | CSV import, exports, uploads, generated documents, paths built from input |
+| Search, reports and analytics | **[server]** | Global search, dashboards, aggregates that cross users or tenants |
+| Notifications and messages | **[server]** | Email, push, in-app, fan-out to many recipients |
+| Operator console and support access | **[hosted]** | Admin routes, impersonation, demo and test routes |
+| Command line and scripts | **[cli]** or **[shell]** | Arguments reaching a shell, unsafe temp files, exit codes, running twice, partial failure |
+| Background jobs and scale | every project | Jobs crossing users or tenants, unbounded loops, work that grows with the data |
 
 References: the bug register (do not re-report known ids; check closed ones for regressions), the
 attack log, and the two matrices.
 
 ## C. Checklist (every item, every file)
 
-- **Tenant isolation** (the most important): settle the enforcement model first (how the tenant
+- **Tenant isolation** **[multi-tenant]** (the most important): settle the enforcement model first (how the tenant
   header is resolved against the token's memberships). Then look for:
   - a `select` or `get` by id without the tenant filter
   - a list scoped by tenant but its detail, update, delete, export or file download not
@@ -85,20 +96,27 @@ attack log, and the two matrices.
 - **Authorization:** a missing permission check, role escalation through a client header, a guest
   past their project, a member editing another's record, demo or test routes reachable outside
   development.
-- **Sign-in and sessions** (attack matrix section 7): a session issued for anyone but who proved the
+- **Sign-in and sessions** **[accounts]** (attack matrix section 7): a session issued for anyone but who proved the
   code; sign-up over an existing account; old codes still live; tries counted without a lock;
   deactivated users refreshing; reused second-factor codes; test-auth gating.
-- **Offline and sync** (section 6): a queued route that is not idempotent without its key, or moves
+- **Offline and sync** **[offline]** (section 6): a queued route that is not idempotent without its key, or moves
   money; a key not scoped to account and tenant; a device time believed without proof; a queued
   change not checked again on arrival; device data left after sign-out.
-- **Races:** read-then-write without a constraint or row lock: double payment, refund or invoice;
-  counters; imports saved twice.
+- **Races:** read-then-write without a constraint or row lock: counters, a record or upload saved
+  twice, two runs of one job at once; with **[money]**, a double payment, refund or invoice.
 - **Idempotency:** replay gives `Idempotency-Replayed: true`; in flight gives 409 and `Retry-After`;
   same key with another body gives 422; keys scoped per tenant and user.
-- **Money** (section 8): decimals everywhere (no float), rounding, partial payments, refunds (twice,
+- **Local network** **[self-hosted]**: a state change accepted from another website (no Origin or
+  CSRF check on every POST, PUT, PATCH and DELETE); a Host header not checked against an allow-list
+  (DNS rebinding turns a browser on the LAN into an attacker); listening on every interface without
+  a password; secrets or tokens readable by other users on the machine, or written to logs.
+- **Scripts and the command line** **[cli]** **[shell]**: input reaching `sh -c`, `eval` or an
+  unquoted variable; temp files in a shared folder with a guessable name; a failure halfway that
+  leaves the machine broken; a second run that does damage; `set -euo pipefail` missing.
+- **Money** **[money]** (section 8): decimals everywhere (no float), rounding, partial payments, refunds (twice,
   over, pending), the account from the server, the mock provider refused in production, webhook
   signature, replay and order.
-- **Time:** the tenant's today instead of `date.today()`; day boundaries across time zones; a change
+- **Time:** the user's or tenant's today instead of `date.today()`; day boundaries across time zones; a change
   queued before midnight and sent after.
 - **Async:** blocking I/O in async code, a missing `await`, a session shared across tasks. Python:
   `uv run ruff check --select ASYNC,S,B`.

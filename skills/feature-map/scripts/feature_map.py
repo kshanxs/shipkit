@@ -11,7 +11,7 @@ Configured by the [feature_map] table of shipkit.toml (all optional):
 
     [feature_map]
     catalog = "docs/feature_catalog.md"      # the map
-    tiers = ["Free", "Pro", "Enterprise"]   # plan names, cheapest first (the generic SaaS default)
+    tiers = ["Free", "Pro", "Enterprise"]   # plan names, cheapest first; [] (or [project] plans = "none") for none
     specs_dir = "docs/features"              # every spec here must be linked from the map
     comparison = "apps/web/src/pricing.ts"   # optional: a file with `export const COMPARISON = [...]`
     catalog_out = "apps/web/src/catalog.ts"  # optional: generated public catalog (.ts or .json)
@@ -85,7 +85,9 @@ SPECS = Path(_FM.get("specs_dir", _CFG.get("docsync", {}).get("features_dir", f"
 PRICING_TS = Path(_FM["comparison"]) if _FM.get("comparison") else None
 CATALOG_TS = Path(_FM["catalog_out"]) if _FM.get("catalog_out") else None
 
-PLANS = tuple(_FM.get("tiers", ("Free", "Pro", "Enterprise")))
+# Plan names, cheapest first. A project with no priced plans ([project] plans = "none") has none, so
+# the map is grouped by area alone and nothing is held to a pricing page.
+PLANS = tuple(_FM.get("tiers", () if _CFG.get("project", {}).get("plans") == "none" else ("Free", "Pro", "Enterprise")))
 # The tracker's status words, sorted by what is left to do.
 DONE = ("Built",)
 NEEDS_WORK = ("Partly", "Backend only", "Frontend only", "In progress")

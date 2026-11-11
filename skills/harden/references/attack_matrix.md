@@ -5,6 +5,10 @@ is a test to write (see [the skill](../SKILL.md) for the loop and the tools).
 "Holds" is the behaviour to assert; write where your code does it next to each
 row you adopt.
 
+A section marked with a trait applies only when the project profile has it
+(`project.py show`): **[multi-tenant]**, **[offline]**, **[accounts]**, **[money]**,
+**[self-hosted]**. Unmarked sections apply to every project with inputs.
+
 ## 1. Input
 
 | Attack | Try | A flaw looks like | Holds |
@@ -17,6 +21,8 @@ row you adopt.
 | Files | A CSV import with 50,000 rows, a wrong type, a formula (`=HYPERLINK(...)`) | Memory, a hang, a formula run in a spreadsheet | The import's row limit and preview; values that start with `=`, `+`, `-`, `@` exported as text |
 
 ## 2. Whose data, which role
+
+The tenant rows are **[multi-tenant]**; the role rows apply wherever there is more than one role.
 
 | Attack | Try | A flaw looks like | Holds |
 |---|---|---|---|
@@ -55,7 +61,7 @@ row you adopt.
 | An expensive route | A report or export with the widest filters, repeated | Seconds per request, the pool held | Pagination, limits, an index (`EXPLAIN ANALYZE`), the rate limit |
 | Sign-in | Many codes for one address; many accounts from one IP | Codes sent without limit | The rate limit and CAPTCHA, counted wrong codes |
 
-## 6. Offline and sync
+## 6. Offline and sync **[offline]**
 
 The combinations to run are test matrix section 3.2.
 
@@ -71,7 +77,7 @@ The combinations to run are test matrix section 3.2.
 | The device after sign-out | Sign out offline with changes waiting; read the device storage | Another person's data or changes left behind | Empty; a shared computer writes nothing |
 | Money offline | A payment with no connection | Queued, then paid twice | Fails and says so; money is never queued |
 
-## 7. Identity and sessions
+## 7. Identity and sessions **[accounts]**
 
 Sign-in bugs are the most often Critical: a session issued for someone other than the person who
 proved the code.
@@ -86,7 +92,7 @@ proved the code.
 | Invites and resets | A link twice, expired, by another email; after the inviter lost the right | Account changed or joined | Refused; same answer for every account state |
 | Roles | Giving a role one does not hold, or in another tenant; acting past it | Granted | 403 |
 
-## 8. Money
+## 8. Money **[money]**
 
 | Attack | Try | A flaw looks like | Holds |
 |---|---|---|---|
@@ -95,3 +101,17 @@ proved the code.
 | Refunds | Two at once, more than paid, while one is pending | Refunded twice or over | One; never over; pending counted as such |
 | Reconciliation | A settlement line missing, repeated, or of another tenant | Matched silently | Flagged for a person |
 | Provider down | The provider fails or times out mid-payment | Marked paid without a confirmed payment | Paid only on confirmation; the checkout can be tried again |
+
+## 9. Local network **[self-hosted]**
+
+A server people run at home or on their own network is reachable by every device there and,
+through the browser, by every website its users visit.
+
+| Attack | Try | A flaw looks like | Holds |
+|---|---|---|---|
+| Cross-site request | A form on another origin posting to the app; a `fetch` with `mode: "no-cors"` | The change happens | Every state change checks `Origin` (or a CSRF token) and refuses a foreign or missing one |
+| DNS rebinding | A request whose `Host` is an attacker's domain resolving to the app's address | Answered as normal | The `Host` header checked against an allow-list (the configured names, `localhost`, the LAN address) |
+| No password | Every route with no credentials, when a password or token is configured | Data or actions without it | 401 or 403; only health and the sign-in page answer |
+| Bind address | Start it and list what it listens on | Every interface, by surprise | What the docs say: local only, or the LAN, by a setting |
+| Secrets on disk | Read the config and token files as another user; read the logs after an error | Readable; the token in a log line | `0600` files; tokens never logged |
+

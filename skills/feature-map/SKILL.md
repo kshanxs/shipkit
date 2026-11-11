@@ -7,11 +7,16 @@ description: "Keeps the feature map (docs/feature_catalog.md): the one file list
 
 `docs/feature_catalog.md` answers three questions for every feature: **which tier is it in, what is
 under it, and is it built?** The pricing page and the roadmap are copies of it for customers; this
-skill keeps the three the same. It works beside docsync (changelogs, specs, the tracker): on a code
+skill keeps the three the same.
+
+**Tiers and pricing apply only to priced plans.** When the project profile has no priced plans
+(`project.py has plans` says no, or `[project] plans = "none"`), the map is grouped by area alone:
+`tiers = []`, no "which tier", no pricing page, no comparison table; the sections below about tiers
+and pricing do not apply. The map still answers what is under each feature and what is built. It works beside docsync (changelogs, specs, the tracker): on a code
 change use docsync first, then this. `$SK` is the skills folder this skill is installed in.
 
 Configured by `[feature_map]` in `shipkit.toml`: `catalog`, `tiers` (cheapest first; default
-`["Free", "Pro", "Enterprise"]`), `specs_dir`, and optionally `comparison` (the file holding the
+`["Free", "Pro", "Enterprise"]`, or none when `[project] plans = "none"`), `specs_dir`, and optionally `comparison` (the file holding the
 pricing page's `export const COMPARISON = [...]`) and `catalog_out` (the generated catalog, `.ts` or
 `.json`).
 

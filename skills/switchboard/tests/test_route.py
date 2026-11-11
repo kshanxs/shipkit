@@ -26,7 +26,7 @@ import route  # noqa: E402
 EXPECTED = {
     "stack-backend", "stack-web", "stack-native", "wire-api", "seedbed", "fanout", "harden", "bug-sweep",
     "load-sim", "perf-watch", "triage-report", "ship-check", "docsync", "feature-map", "open-loops", "handoff", "switchboard",
-    "kit-build", "kit-break", "kit-flow", "kit-feature", "autopilot",
+    "kit-build", "kit-break", "kit-flow", "kit-feature", "autopilot", "profile",
 }  # fmt: skip
 
 

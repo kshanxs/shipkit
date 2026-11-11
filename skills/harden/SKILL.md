@@ -21,6 +21,15 @@ line), bug-sweep, load-sim, perf-watch and triage-report, which read the same
 [attack matrix](references/attack_matrix.md); **how** to make requests really race is in
 [concurrency recipes](references/concurrency_recipes.md).
 
+## The project profile
+
+Run `python3 $SK/switchboard/scripts/project.py show` first. A section marked **[multi-tenant]**,
+**[money]**, **[offline]**, **[self-hosted]** or **[server]** applies only when the profile lists
+that trait; skip it otherwise and put it under "Not tried" with the reason ("not multi-tenant").
+The attacks that fit every project still apply: hostile input, roles, races, retries, a failing
+dependency. A self-hosted server is attacked from the local network and from a browser visiting a
+hostile site: cross-site requests and DNS rebinding (attack matrix, "Local network").
+
 ## The loop
 
 | Step | What | Done when |
@@ -58,9 +67,10 @@ $M pairs who network timing --feature 3.1    # every pair of these axes' values 
 Asked to harden "everything" or to "penetration test" it, work from the gaps, worst first:
 
 1. `matrix.py stale`: a built feature with no cell gets one first.
-2. `matrix.py coverage --missing`, ordered: money and another tenant's data (Critical if they
-   break), then sign-in and roles, then offline and sync, then the rest.
-3. The machine sweeps, which cover every route at once:
+2. `matrix.py coverage --missing`, ordered: money and another tenant's data where the profile has
+   them (Critical if they break), then sign-in, roles and the local network, then offline and sync,
+   then the rest.
+3. **[multi-tenant]** The machine sweeps, which cover every route at once:
    `isolation_sweep.py --config sweep.toml` (every record route x another tenant), then the same
    with B as each role.
 4. One cell at a time through the loop; a run is a group of cells (`attacks.py run`).
@@ -68,7 +78,7 @@ Asked to harden "everything" or to "penetration test" it, work from the gaps, wo
 
 Say at the start how many cells the run will take, and at the end how many it covered.
 
-## The rules a multi-tenant API must keep
+## The rules a multi-tenant API must keep **[multi-tenant]**
 
 | Who asks | For what | Answer |
 |---|---|---|
@@ -90,19 +100,32 @@ Write these into the project's test matrix with the project's own words.
 | Requests that really race | Each request on its own session and connection, held at a gate until all have read: [concurrency recipes](references/concurrency_recipes.md) |
 | A dependency failing | Patch the call to raise (cache, email, payment); safe helpers must degrade, critical ones fail visibly |
 | The migrations, not `create_all` | A test that runs the real migration chain |
-| Many tenants at once | load-sim |
+| Many tenants at once **[multi-tenant]** | load-sim |
 
 **A check in Python is not a guard against a race; a constraint or a lock is.** Fixes, in order: a
 unique constraint (and the 409 it gives), `SELECT ... FOR UPDATE` on the row being decided, an
 idempotency claim.
 
-## Offline and sync
+## Offline and sync **[offline]**
 
 Offline changes fail silently: the person sees "saved", and the server decides hours later. Every
 change that may wait on a device is tested against every timing and every "meanwhile" (matrix
 section 3.2), not pairwise: sent twice, sent together, the answer lost after the commit, the device
 clock behind and ahead, the member removed meanwhile, another account signing in on the device.
-Money is never queued.
+With **[money]**: money is never queued.
+
+## The local network **[self-hosted]**
+
+A self-hosted server is reachable by every device on the network and, through the user's browser,
+by every website they visit. Test, against the real server:
+
+| Attack | Expected |
+|---|---|
+| A POST, PUT, PATCH or DELETE with another site's `Origin` (or none, from a browser form) | Refused (403); nothing changed |
+| A request with a `Host` header not on the allow-list (DNS rebinding) | Refused (400 or 403) |
+| Every route with no password or token, when one is configured | 401 or 403; only health and the sign-in page answer |
+| The bind address and port | What the docs say (local only, or the LAN); never every interface by surprise |
+| Secrets and tokens on disk | Readable only by the app's user; never in logs or error pages |
 
 ## Load
 

@@ -75,6 +75,20 @@ $K members kit-break             # the skills a kit needs (install.sh --skills k
 
 A named kit or the autopilot comes alone: it picks its own skills, so the router adds none.
 
+## The project profile
+
+`scripts/project.py` says what kind of project this is (`[project]` in shipkit.toml, else
+detected): kind, tenancy, money, plans, auth, surfaces, offline. A step in kits.toml with
+`needs = ["multi-tenant"]` is skipped, with the reason, when the profile lacks the trait, and the
+other skills' scripts filter their checklists the same way. The `profile` skill (`/profile`) fills
+shipkit.toml in from the repository; the autopilot lists it first while `[project]` is missing.
+
+```bash
+P="python3 $SK/switchboard/scripts/project.py"
+$P show              # the profile and where each value came from
+$P has money plans   # exit 0 when the profile has every trait named
+```
+
 ## Where things go
 
 - The project is the folder above `.claude`, `.agents` or `.trae` (or `SHIPKIT_ROOT`).

@@ -26,6 +26,7 @@ How it decides (first match wins for **Now**):
 
 | State | Now |
 |---|---|
+| shipkit.toml has no `[project]` | `/profile` first (fill in the profile from the repository), then the rest |
 | the request names a skill or kit | that one |
 | the request is about launching | `/break launch` |
 | the session is starting / ending | `/flow start` / `/flow` |
@@ -34,8 +35,10 @@ How it decides (first match wins for **Now**):
 | only docs changed | `/flow` |
 | nothing changed | `/flow start`, then the skill the request fits |
 
-`/break full` is offered when `load-scenario.toml` points at this machine and the stack answers;
-otherwise it is listed under Not now with the reason.
+`/break full` is offered when the project is multi-tenant, `load-scenario.toml` points at this
+machine and the stack answers; otherwise it is listed under Not now with the reason. The first line
+of the answer is the project profile; every kit skips the steps it does not fit (a step's `needs`
+in kits.toml), with the reason.
 
 ## 2. Run
 

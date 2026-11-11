@@ -59,7 +59,8 @@ python3 $SK/seedbed/scripts/check_seeds.py --init     # copies references/seedbe
 | A situation worth staging for a demo or a test | A scenario function, and its name in `[catalogue.scenarios]` with the module it needs |
 
 The tenant itself (its people, its settings) is always seeded, so every persona can sign in and
-every picker has something in it.
+every picker has something in it. Without tenants, the same goes for the install's settings and its
+user or users.
 
 ### 3. Mocks (when the front end has a mock layer)
 
