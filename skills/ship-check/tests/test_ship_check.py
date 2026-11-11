@@ -79,6 +79,54 @@ class ShipCheck(unittest.TestCase):
         self.assertIn("head SHA", out)
         self.assertIn("Top 5", out)
 
+    def test_installed_skill_folders_are_not_project_evidence(self) -> None:
+        for folder in (".claude/skills/docsync", ".agents/skills/docsync", ".trae/skills/docsync", "tools/skills/docsync"):
+            target = self.root / folder / "references"
+            target.mkdir(parents=True)
+            (target / "config.md").write_text("# Config\n")
+            (target / "audit.py").write_text("def record(): ...\n")
+        (self.root / "tools/skills/docsync/.shipkit").write_text("shipkit 0.1.0\n")
+        text = self.scaffold()
+        for folder in (".claude/", ".agents/", ".trae/", "tools/skills/"):
+            self.assertNotIn(f"`{folder}", text)
+        self.assertIn("`app/audit.py`", text)
+        cited = text.replace("| Audit logging | UNKNOWN | |", "| Audit logging | DONE | `.claude/skills/docsync/references/audit.py` |", 1)
+        (self.root / "report.md").write_text(cited)
+        out = self.run_script("check", "report.md").stdout
+        self.assertIn("cites `.claude/skills/docsync/references/audit.py`, an installed skill, not project evidence", out)
+
+    def test_a_repository_with_no_commits_says_so_and_passes(self) -> None:
+        empty = tempfile.TemporaryDirectory()
+        self.addCleanup(empty.cleanup)
+        root = Path(empty.name)
+        subprocess.run(["git", "init", "-q", "-b", "main"], cwd=root, check=True)
+        env = {**os.environ, "SHIPKIT_ROOT": str(root)}
+        made = subprocess.run([sys.executable, str(SCRIPT), "scaffold", "--out", "report.md"], capture_output=True, text=True, cwd=root, env=env)
+        self.assertEqual(made.returncode, 0, made.stderr)
+        self.assertEqual(made.stderr, "")
+        text = (root / "report.md").read_text()
+        self.assertIn("Audited: `main`, no commits yet, on ", text)
+        self.assertNotIn("not a git checkout", text)
+        checked = subprocess.run([sys.executable, str(SCRIPT), "check", "report.md"], capture_output=True, text=True, cwd=root, env=env)
+        self.assertEqual(checked.returncode, 0, checked.stdout)
+        self.assertNotIn("<sha>", checked.stdout)
+
+    def test_a_folder_that_is_not_a_git_checkout_says_so_and_passes(self) -> None:
+        plain = tempfile.TemporaryDirectory()
+        self.addCleanup(plain.cleanup)
+        root = Path(plain.name)
+        (root / "package.json").write_text('{"name": "vite-app"}\n')
+        env = {**os.environ, "SHIPKIT_ROOT": str(root), "GIT_CEILING_DIRECTORIES": str(root.parent)}
+        made = subprocess.run([sys.executable, str(SCRIPT), "scaffold", "--out", "report.md"], capture_output=True, text=True, cwd=root, env=env)
+        self.assertEqual(made.returncode, 0, made.stderr)
+        text = (root / "report.md").read_text()
+        self.assertIn("Audited: not a git checkout (no branch or SHA to record), on ", text)
+        self.assertNotIn("`unknown`", text)
+        checked = subprocess.run([sys.executable, str(SCRIPT), "check", "report.md"], capture_output=True, text=True, cwd=root, env=env)
+        self.assertEqual(checked.returncode, 0, checked.stdout)
+        self.assertIn("note: report.md audits a folder with no git history; there is no head SHA to record", checked.stdout)
+        self.assertNotIn("head SHA audited is not written", checked.stdout)
+
     def test_init_copies_the_checklist_and_scaffold_uses_it(self) -> None:
         self.assertEqual(self.run_script("init").returncode, 0)
         path = self.root / "ship-check.toml"

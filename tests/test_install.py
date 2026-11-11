@@ -103,6 +103,32 @@ class Install(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(list(self.target.iterdir()), [])
 
+    def test_dry_run_says_would_and_never_claims_it_wrote(self) -> None:
+        result = install(self.target, "--dry-run", "--hooks")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("would write shipkit.toml", result.stdout)
+        self.assertIn(f"Claude Code: would install {len(SKILLS)} of {len(SKILLS)} skills in .claude/skills", result.stdout)
+        for line in result.stdout.splitlines():
+            self.assertFalse(line.strip().startswith(("wrote", "installed")) or ": installed" in line, line)
+            self.assertNotIn("Done.", line)
+        self.assertIn("Dry run: nothing was written.", result.stdout)
+        self.assertEqual(list(self.target.iterdir()), [])
+
+    def test_the_count_is_what_was_installed_and_skips_are_listed(self) -> None:
+        mine = self.target / ".claude/skills/docsync"
+        mine.mkdir(parents=True)
+        (mine / "SKILL.md").write_text("---\nname: docsync\ndescription: mine\n---\n")
+        total = len(SKILLS)
+        dry = install(self.target, "--claude", "--dry-run")
+        self.assertIn(f"Claude Code: would install {total - 1} of {total} skills in .claude/skills (1 skipped)", dry.stdout)
+        result = install(self.target, "--claude")
+        self.assertIn(f"Claude Code: installed {total - 1} of {total} skills in .claude/skills (1 skipped)", result.stdout)
+        self.assertIn("Skipped (exist and were not installed by shipkit; use --force to replace them):\n  .claude/skills/docsync\n", result.stdout)
+        clean = install(self.target, "--agents")
+        self.assertEqual(clean.returncode, 0, clean.stdout + clean.stderr)
+        self.assertIn(f"Cursor / Codex: installed {total} of {total} skills in .agents/skills\n", clean.stdout)
+        self.assertNotIn("Skipped", clean.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

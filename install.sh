@@ -78,12 +78,21 @@ fi
 
 run() { if [ "$DRY" = 1 ]; then echo "would: $*"; else "$@"; fi; }
 
+# What each layout really got: copy_skill and link_skill count installs and record skips.
+COUNT=0; SKIPPED=""
+skip_skill() {  # skip_skill <dest>
+  echo "  skip  $1: exists and was not installed by shipkit (use --force to replace it)"
+  SKIPPED="$SKIPPED  ${1#"$TARGET"/}
+"
+}
+
 copy_skill() {  # copy_skill <name> <dest-skills-dir>
   local name="$1" dest="$2/$1"
   if [ -e "$dest" ] && [ ! -L "$dest" ] && [ ! -f "$dest/.shipkit" ] && [ "$FORCE" != 1 ]; then
-    echo "  skip  $dest: exists and was not installed by shipkit (use --force to replace it)"
+    skip_skill "$dest"
     return
   fi
+  COUNT=$((COUNT + 1))
   run rm -rf "$dest"
   run mkdir -p "$dest"
   if [ "$DRY" = 1 ]; then echo "would: copy $SRC/$name -> $dest"; return; fi
@@ -94,15 +103,18 @@ copy_skill() {  # copy_skill <name> <dest-skills-dir>
 link_skill() {  # link_skill <name> <dest-skills-dir> <relative target>
   local name="$1" dest="$2/$1" rel="$3"
   if [ -e "$dest" ] && [ ! -L "$dest" ] && [ ! -f "$dest/.shipkit" ] && [ "$FORCE" != 1 ]; then
-    echo "  skip  $dest: exists and was not installed by shipkit (use --force to replace it)"
+    skip_skill "$dest"
     return
   fi
+  COUNT=$((COUNT + 1))
   run rm -rf "$dest"
   run ln -s "$rel/$name" "$dest"
 }
 
 install_layout() {  # install_layout <dir> <label>
-  local dir="$TARGET/$1/skills"
+  local dir="$TARGET/$1/skills" total
+  total=$(printf '%s\n' "$SKILLS" | wc -l | tr -d ' ')
+  COUNT=0
   run mkdir -p "$dir"
   for s in $SKILLS; do
     if [ "$LINK" = 1 ] && [ "$AGENTS" = 1 ] && [ "$1" != ".agents" ]; then
@@ -111,7 +123,13 @@ install_layout() {  # install_layout <dir> <label>
       copy_skill "$s" "$dir"
     fi
   done
-  echo "  $2: $(printf '%s\n' "$SKILLS" | wc -l | tr -d ' ') skills in $1/skills"
+  local skipped=$((total - COUNT)) note=""
+  [ "$skipped" = 0 ] || note=" ($skipped skipped)"
+  if [ "$DRY" = 1 ]; then
+    echo "  $2: would install $COUNT of $total skills in $1/skills$note"
+  else
+    echo "  $2: installed $COUNT of $total skills in $1/skills$note"
+  fi
 }
 
 echo "shipkit $VERSION -> $TARGET"
@@ -121,8 +139,17 @@ echo "shipkit $VERSION -> $TARGET"
 
 # The project's config: the generic SaaS example, never over an existing file.
 if [ "$CONFIG" = 1 ] && [ ! -e "$TARGET/shipkit.toml" ]; then
-  run cp "$HERE/shipkit.example.toml" "$TARGET/shipkit.toml"
-  echo "  wrote shipkit.toml (the generic SaaS example: edit the paths to match the project)"
+  if [ "$DRY" = 1 ]; then
+    echo "  would write shipkit.toml (the generic SaaS example: edit the paths to match the project)"
+  else
+    cp "$HERE/shipkit.example.toml" "$TARGET/shipkit.toml"
+    echo "  wrote shipkit.toml (the generic SaaS example: edit the paths to match the project)"
+  fi
+fi
+if [ "$DRY" = 1 ]; then
+  [ "$AGENTS" = 1 ] && echo "  would write the skill table in AGENTS.md"
+  [ "$CLAUDE" = 1 ] && echo "  would write slash commands in .claude/commands/"
+  [ "$HOOKS" = 1 ] && echo "  would add hooks to .claude/settings.json"
 fi
 
 # AGENTS.md: Cursor and Codex read it. Add the skill table's markers once; the router fills them.
@@ -199,4 +226,12 @@ if [ "$DRY" != 1 ]; then
       || { echo "  check $layout: FAILED (run: python3 $layout/skills/switchboard/scripts/route.py --check)" >&2; exit 1; }
   done
 fi
-echo "Done. Suggested .gitignore lines: .fanout/  sim-out/"
+if [ -n "$SKIPPED" ]; then
+  echo "Skipped (exist and were not installed by shipkit; use --force to replace them):"
+  printf '%s' "$SKIPPED"
+fi
+if [ "$DRY" = 1 ]; then
+  echo "Dry run: nothing was written."
+else
+  echo "Done. Suggested .gitignore lines: .fanout/  sim-out/"
+fi

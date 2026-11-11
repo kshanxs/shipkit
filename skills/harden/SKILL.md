@@ -89,7 +89,7 @@ Write these into the project's test matrix with the project's own words.
 
 | Need | Use |
 |---|---|
-| Every record route aimed at another tenant | `isolation_sweep.py --config sweep.toml [--writes] [--dry-run]`: reads the OpenAPI document; prints each 2xx for the attacker as a CANDIDATE |
+| Every record route aimed at another tenant | `isolation_sweep.py --config sweep.toml [--writes] [--dry-run] [--base-url URL]`: reads the OpenAPI document; prints each 2xx for the attacker as a CANDIDATE |
 | Hostile input on one route, and a burst on it | `adversarial_runner.py --url ... --fuzz` and `--concurrency 20 --requests 200` (this machine only unless `--allow-host`) |
 | Requests that really race | Each request on its own session and connection, held at a gate until all have read: [concurrency recipes](references/concurrency_recipes.md) |
 | A dependency failing | Patch the call to raise (cache, email, payment); safe helpers must degrade, critical ones fail visibly |
