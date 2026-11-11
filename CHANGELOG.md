@@ -4,6 +4,10 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 
 ## [Unreleased]
 
+### Changed
+
+- README: badges, navigation and Mermaid diagrams (the three skill groups, a feature end to end, how skills hand off, how the switchboard routes, what install.sh writes, shipkit.toml), a note on installing once for every project, and what CI checks (2026-11-11)
+
 ## [0.1.0] - 2026-11-11
 
 ### Added
