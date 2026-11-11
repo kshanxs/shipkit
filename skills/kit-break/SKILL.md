@@ -59,6 +59,10 @@ End with one table, then the next step:
 | 3 | load-sim | blocked: nothing answers at http://localhost:8000 | start the local stack |
 
 Results are **done**, **skipped** (why), **blocked** (how to unblock) or **failed** (what broke).
+
+**Evidence rule:** a step is **done** only when its evidence was produced in this session: the
+command that was run and what it printed (test counts, exit code, the report's path). A step whose
+result you did not see is **not verified**, never done. Report a failure as it is.
 Then suggest `/flow` to record it.
 
 ## Rules

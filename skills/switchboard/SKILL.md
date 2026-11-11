@@ -29,6 +29,26 @@ At most four skills are suggested; a short reply ("yes", "continue") gets none. 
 skills (folders beside this one with a `SKILL.md`) are ever picked, so a partial install routes
 only to what it has.
 
+## Other skill packs installed beside shipkit
+
+Shipkit says **what this repository requires** (its conventions, registers, docs and gates).
+General method packs say **how to work**, and the two are meant to be used together. Commonly
+installed ones are superpowers (brainstorming, writing-plans, executing-plans,
+test-driven-development, systematic-debugging, verification-before-completion, code review,
+using-git-worktrees, dispatching-parallel-agents) and karpathy-guidelines (assumptions,
+simplicity, surgical changes, success criteria). The router only picks shipkit skills; when one of
+these overlaps a shipkit skill, the shipkit skill decides for this repository:
+
+| Overlap | Who decides | Why |
+|---|---|---|
+| parallel agents, worktrees | fanout | it reserves migration, question and bug numbers and gives each worktree its own ports |
+| test-first, breaking it | harden | its attack log and test matrix are what docsync and triage-report read |
+| code review of new commits | bug-sweep | it reports through triage-report with the matrix coverage |
+| finishing a branch, wrap-up | kit-flow | changelogs, feature map, open questions and the handoff row must move with it |
+
+Use the method packs inside a shipkit step: design and plan before kit-build, root-cause debugging
+inside a failing gate, verification before any step is reported done.
+
 ## The slash commands
 
 | Group | Skill | Commands |
