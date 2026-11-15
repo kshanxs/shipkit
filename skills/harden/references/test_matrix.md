@@ -42,7 +42,9 @@ device, meanwhile, dependency, change and scale.
 ## 3. Cells
 
 Covered by: an attack in the attack log (`ATK-NNN`), a test (`path::name`), or `Not yet`.
-`matrix.py coverage` checks that what is named exists. Write `Not yet` rather than leaving a cell
+`matrix.py coverage` checks that what is named exists: every span in backticks is taken as a test
+or a path, so write an error code or a note in plain text (`ATTENDANCE_SYNC_EXPIRED` in
+backticks fails as a missing test). Write `Not yet` rather than leaving a cell
 out: a cell not yet covered is the next thing to try.
 
 ### 3.1 Every route

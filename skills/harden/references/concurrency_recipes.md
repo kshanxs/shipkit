@@ -25,29 +25,40 @@ from sqlalchemy import event
 def all_read_before_any_writes(n: int, table: str, engine, timeout: float = 5.0):
     barrier = threading.Barrier(n, timeout=timeout)
     seen: set[int] = set()
+    gate = {"held": 0, "broken": False}
 
     def after(conn, cursor, statement, params, context, executemany):
         if statement.lstrip().upper().startswith("SELECT") and f" {table}" in statement and id(conn) not in seen:
             seen.add(id(conn))
-            with contextlib.suppress(threading.BrokenBarrierError):
+            gate["held"] += 1
+            try:
                 barrier.wait()
+            except threading.BrokenBarrierError:
+                gate["broken"] = True
 
     event.listen(engine.sync_engine, "after_cursor_execute", after)
     try:
-        yield
+        yield gate
     finally:
         event.remove(engine.sync_engine, "after_cursor_execute", after)
 ```
 
 ```python
 async def test_five_creates_at_once_make_one_project(racing_client, two_tenants, engine):
-    with all_read_before_any_writes(5, "projects", engine):
+    with all_read_before_any_writes(5, "projects", engine) as gate:
         answers = await asyncio.gather(*(
             racing_client.post("/api/v1/projects", headers=two_tenants.headers_a, json={"key": "WEB", "name": "Web"})
             for _ in range(5)))
+    assert gate == {"held": 5, "broken": False}  # all five really met at the gate
     assert sorted(a.status_code for a in answers) == [201, 409, 409, 409, 409]
 ```
 
+- Assert the gate held every request. A gate that never engaged (its table is read in a way the
+  hook does not see, or under another name) or timed out leaves only timing, and the test can
+  pass or fail by luck. A lock the fix takes *before* the gated read makes the gate time out:
+  the first request waits at the gate while the second waits on the lock. Gate on a table the
+  route reads before it takes the lock (the parent row, the roll), so both are past that read
+  before either checks.
 - Count the rows afterwards on a fresh session: status codes alone do not prove nothing extra was
   written.
 - The data the requests read must be committed before they start; a fixture that rolls back is
