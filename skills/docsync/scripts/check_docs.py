@@ -23,7 +23,7 @@ Errors
   coverage   a code folder under `code_roots` is missing from the tracker's code map
   status     a feature specification has no dated status line
   plan       a feature specification is linked from none of `plan_sources`
-  emoji      a document uses an emoji, a tick or cross symbol, or a coloured dot
+  emoji      a document other than the root README uses an emoji, a tick or cross symbol, or a coloured dot
   unreleased a change log's Unreleased section is malformed
   bugs       the bug register repeats an ID, an open bug has no severity, or a bug a change log
              records as fixed is still open
@@ -258,9 +258,11 @@ EMOJI = re.compile("[\U0001f000-\U0001faff☀-➿⬀-⯿⌀-⏿️‍⃣]")
 
 
 def check_emoji(files: list[Path]) -> list[str]:
-    """Documents are written in words: no emoji, ticks or coloured dots."""
+    """Documents are written in words: no emoji, ticks or coloured dots. The root README may use them."""
     problems = []
     for path in files:
+        if rel(path) == "README.md":
+            continue
         for number, line in enumerate(path.read_text(encoding="utf-8").split("\n"), 1):
             found = EMOJI.findall(line)
             if found:
