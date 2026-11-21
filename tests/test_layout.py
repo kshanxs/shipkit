@@ -16,7 +16,7 @@ SKILLS = sorted(p.parent for p in (REPO / "skills").glob("*/SKILL.md"))
 EXPECTED = {
     "stack-backend", "stack-web", "stack-native", "stack-cli", "wire-api", "seedbed", "fanout", "harden", "bug-sweep",
     "load-sim", "perf-watch", "triage-report", "ship-check", "docsync", "feature-map", "open-loops", "handoff", "switchboard",
-    "kit-build", "kit-break", "kit-flow", "kit-feature", "autopilot", "profile",
+    "kit-build", "kit-break", "kit-flow", "kit-feature", "autopilot", "profile", "shipkit-feedback",
 }  # fmt: skip
 
 

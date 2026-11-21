@@ -284,3 +284,8 @@ triggers = [
   '\bwhat (skills? )?should (i|we) run\b',
   '\bautopilot\b',
 ]
+
+[shipkit-feedback]
+short = ["skillfix"]
+summary = "Turn a lesson from project work into a generic shipkit pull request or issue"
+triggers = ['\bimprove shipkit\b|\bshipkit feedback\b|\bfield report\b|\bupdate the skill\b']

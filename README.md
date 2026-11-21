@@ -102,6 +102,7 @@ flowchart LR
 | [feature-map](skills/feature-map/) | `/fmap` | One map of features, sub-features, tiers and what is built; holds the pricing page to it and generates the public catalog |
 | [open-loops](skills/open-loops/) | `/loops` | The open questions register, with what the code does today, what each answer changes, and code anchors that are checked when the code moves |
 | [handoff](skills/handoff/) | `/handoff` | `HANDOFF.md`, the memory between agent sessions: read first, one work log row and updated sections last; Notion as an optional adapter |
+| [shipkit-feedback](skills/shipkit-feedback/) | `/skillfix` | Turns a lesson from project work into a generic shipkit pull request or issue, on your repository or fork |
 | [switchboard](skills/switchboard/) | `/sb` | The router: picks the skills a request needs, runs as a Claude Code hook, writes the slash commands and the AGENTS.md table |
 | [profile](skills/profile/) | `/profile` | Fills in `shipkit.toml` from the project: detects its kind, tenants, money, plans, auth, surfaces, code folders and ports, checks every guess in the code, asks only what is left, and writes the profile every skill runs by |
 
@@ -293,10 +294,17 @@ code cannot answer. Re-run the installer to update. By hand: copy `skills/<name>
 `skills/switchboard/commands/*.md` into `<project>/.claude/commands/`, and run
 `python3 <project>/.claude/skills/switchboard/scripts/project.py write`.
 
-> [!TIP]
-> Skills can also be installed once for every project, as symlinks into `~/.claude/skills/` (or
-> `~/.codex/skills/`) pointing at a clone of this repo. A `git pull` then updates every project. The
-> per-project slash commands and hooks still come from `install.sh`.
+### Install once for every project
+
+```bash
+./shipkit/install.sh --global --hooks   # link skills and commands for this user
+python3 shipkit/skills/switchboard/scripts/doctor.py   # what is missing on this machine
+```
+
+Skills are links, so `git pull` updates every project. It uses `~/.claude` and `~/.codex` when they
+exist, and never replaces a skill of your own. Hooks act only in projects with a `shipkit.toml`.
+`--dry-run` shows the changes and `--uninstall` removes them. Linux and macOS are supported, with
+Python 3.11 or newer.
 
 Requirements: `bash` and Python 3.11+ (`tomllib`). Node, uv or Expo only where the project uses them.
 
@@ -307,7 +315,7 @@ Requirements: `bash` and Python 3.11+ (`tomllib`). Node, uv or Expo only where t
 | `/api` `/be` stack-backend | `/harden` `/bth` harden | `/docs` `/ds` docsync |
 | `/web` `/fe` stack-web | `/sweep` `/hunt` bug-sweep | `/fmap` `/features` feature-map |
 | `/native` `/rn` `/mobile` stack-native | `/load` `/sim` load-sim | `/loops` `/oq` open-loops |
-| `/cli` `/shell` stack-cli | | |
+| `/cli` `/shell` stack-cli | | `/skillfix` shipkit-feedback |
 | `/wire` wire-api | `/perf` `/mon` perf-watch | `/handoff` handoff |
 | `/seed` seedbed | `/triage` `/report` triage-report | `/sb` `/route` switchboard |
 | `/fanout` `/par` fanout | `/ship` `/ready` ship-check | `/profile` `/configure` profile |
