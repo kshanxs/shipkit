@@ -1,9 +1,10 @@
 """The repository's shape: every skill has its SKILL.md (with frontmatter that matches its folder),
-a README, a router entry and commands; the root README lists every skill; nothing project-specific
-from the pack's origin leaks into a public file."""
+a README, a router entry and commands; the root README lists every skill; no private term leaks into a
+public file."""
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import tomllib
@@ -77,26 +78,29 @@ class Layout(unittest.TestCase):
 
 
 class Public(unittest.TestCase):
-    """The pack came out of one private product. Its name may appear once, in the README's roadmap line."""
-
-    # Built from pieces so this file does not match its own search.
-    PATTERN = re.compile("|".join(["zy" + "ralum", "lu" + "me", "sch" + "ool", "notion" + r"\.so"]), re.I)
+    """A public repository names no private project. Keep your own terms outside it:
+    SHIPKIT_PRIVATE_TERMS is a file with one term per line (blank lines and # comments ignored)."""
 
     def tracked(self) -> list[Path]:
         out = subprocess.run(["git", "ls-files", "--cached", "--others", "--exclude-standard"], cwd=REPO, capture_output=True, text=True).stdout
         return [REPO / line for line in out.splitlines() if (REPO / line).is_file()]
 
-    def test_nothing_but_the_roadmap_line_names_the_origin(self) -> None:
+    def test_no_private_terms(self) -> None:
+        source = os.environ.get("SHIPKIT_PRIVATE_TERMS")
+        if not source:
+            self.skipTest("SHIPKIT_PRIVATE_TERMS is not set")
+        terms = [t.strip() for t in Path(source).read_text(encoding="utf-8").splitlines() if t.strip() and not t.startswith("#")]
+        if not terms:
+            self.skipTest("no private terms listed")
+        pattern = re.compile("|".join(re.escape(t) for t in terms), re.I)
         hits = []
         for path in self.tracked():
-            if path.suffix in (".png", ".jpg", ".lock") or path.name == "uv.lock":
+            if path.suffix in (".png", ".jpg", ".lock"):
                 continue
             for number, line in enumerate(path.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
-                if self.PATTERN.search(line):
-                    hits.append(f"{path.relative_to(REPO)}:{number}: {line.strip()[:80]}")
-        roadmap = [h for h in hits if h.startswith("README.md:") and "Roadmap" in h]
-        self.assertEqual(len(roadmap), 1, hits)
-        self.assertEqual([h for h in hits if h not in roadmap], [])
+                if pattern.search(line):
+                    hits.append(f"{path.relative_to(REPO)}:{number}")
+        self.assertEqual(hits, [])
 
     def test_no_home_paths_hostnames_or_key_shapes(self) -> None:
         bad = re.compile(r"/home/[a-z]+/|/Users/[A-Za-z]+/|gh[pousr]_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KEY")

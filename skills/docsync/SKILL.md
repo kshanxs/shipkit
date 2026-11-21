@@ -155,7 +155,7 @@ them. A release (`changelog.py release 0.3.0`) is chosen by the owner; the scrip
 5. Never invent a fact: a price, a tier, a company detail, a legal claim, a metric. A missing fact
    becomes an open question. No document claims legal compliance.
 6. Policy wording is drafted, then reviewed by the owner.
-7. No emoji (ticks, crosses, warning signs, coloured dots): write Yes, No, Done, Warning.
+7. No emoji (ticks, crosses, warning signs, coloured dots) outside the root `README.md`: write Yes, No, Done, Warning.
 8. Generated blocks are never edited by hand.
 
 ## Checks
@@ -164,7 +164,7 @@ them. A release (`changelog.py release 0.3.0`) is chosen by the owner; the scrip
 |---|---|
 | `links` | A relative link or image points at a missing file or heading |
 | `fences`, `escapes` | A code fence is not closed; a table or SQL line holds a literal `\n` |
-| `emoji` | A document uses an emoji, a tick or cross, or a coloured dot |
+| `emoji` | A document other than the root `README.md` uses an emoji, a tick or cross, or a coloured dot |
 | `naming`, `scratch` | A file under `docs/` breaks the naming rule (`snake`, `kebab`, `lower` or `any`); a `TODO.md` sits in a package |
 | `stale` | A retired name, price or path from `[[docsync.stale]]` is used outside the logs and its allowed files |
 | `coverage` | A folder under `code_roots` is missing from the tracker's code map |

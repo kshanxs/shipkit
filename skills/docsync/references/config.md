@@ -24,7 +24,7 @@ policy_stamp = ""                                   # the file holding the polic
 pairs = []                                          # files that change together: [["apps/web/src/pricing.ts", "docs/pricing.md"]]
 logs = ["docs/bugs_fixed_and_improvements.md"]      # history files, where retired terms are allowed
 scratch_names = ["task.md", "todo.md", "tasks.md"]  # not allowed inside packages
-emoji = true
+emoji = true                                        # no emoji in documents; the root README.md is always exempt
 matrix = true                                       # lint the harden skill's test matrix when it exists
 
 [[docsync.stale]]                                   # retired names, prices or paths; allowed in the logs and in `allowed`

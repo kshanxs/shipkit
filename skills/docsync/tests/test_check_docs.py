@@ -183,6 +183,13 @@ class Formatting(Repo):
         self.assertIn("emoji (U+2705)", found[0])
         self.assertIn("U+26A0 U+1F680", found[1])
 
+    def test_the_root_readme_may_use_emoji_and_a_nested_one_may_not(self) -> None:
+        self.write("README.md", "# \U0001F680 Project\n")
+        self.write("docs/README.md", "# \U0001F680 Docs\n")
+        found = self.errors()["emoji"]
+        self.assertEqual(len(found), 1)
+        self.assertIn("docs/README.md", found[0])
+
     def test_reports_a_literal_newline_escape_in_a_table_or_sql(self) -> None:
         self.append("docs/features/alpha.md", "\n| a | b |\\n|---|---|\n\n```sql\nCREATE TABLE t (\\n  id INT\n);\n```\n")
         self.assertEqual(len(self.errors()["escapes"]), 2)

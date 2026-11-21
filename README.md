@@ -1,6 +1,6 @@
 <div align="center">
 
-# shipkit
+# 🚢 shipkit
 
 **Eighteen stack-agnostic skills that teach coding agents to build, break, test, document and hand
 off work on real projects, four kits that run a whole group in one command, and an autopilot that
@@ -37,7 +37,7 @@ multi-tenant SaaS with payments gets all of it.
 
 ```mermaid
 flowchart LR
-    subgraph build["Build"]
+    subgraph build["🏗️ Build"]
         direction TB
         be["stack-backend"]
         web["stack-web"]
@@ -46,7 +46,7 @@ flowchart LR
         seed["seedbed"]
         fan["fanout"]
     end
-    subgraph test["Break and Test"]
+    subgraph test["🧪 Break and Test"]
         direction TB
         harden["harden"]
         sweep["bug-sweep"]
@@ -55,7 +55,7 @@ flowchart LR
         triage["triage-report"]
         ship["ship-check"]
     end
-    subgraph flow["Docs and Flow"]
+    subgraph flow["📚 Docs and Flow"]
         direction TB
         docs["docsync"]
         fmap["feature-map"]
@@ -119,12 +119,12 @@ repository **right now**: each step comes out as run, skip (does not apply, and 
 
 ```mermaid
 flowchart LR
-    you(["run shipkit"]) --> auto["autopilot<br/>kit.py auto"]
-    auto --> state[("the repository now<br/>changes · commits · schema<br/>registers · local stack")]
+    you(["🗣️ run shipkit"]) --> auto["🧭 autopilot<br/>kit.py auto"]
+    auto --> state[("📂 the repository now<br/>changes · commits · schema<br/>registers · local stack")]
     state --> auto
-    auto --> now["▶ Now"]
-    auto --> ready["Ready when you want"]
-    auto --> notnow["Not now + why"]
+    auto --> now["▶️ Now"]
+    auto --> ready["🕐 Ready when you want"]
+    auto --> notnow["⛔ Not now + why"]
     now --> kits
     subgraph kits["Kits: each plans its own steps"]
         direction TB
@@ -158,15 +158,15 @@ python3 skills/switchboard/scripts/kit.py plan break --tier full     # one kit's
 ```text
 kit: break (full)
 
- 1. run       harden         test first, then break the changed areas; every flaw a failing test, then the fix
+ 1. ✅ run       harden         test first, then break the changed areas; every flaw a failing test, then the fix
                                └ 4 changed code files against origin/main
- 2. run       bug-sweep      review the new commits (full: and sweep one area); verify before reporting
+ 2. ✅ run       bug-sweep      review the new commits (full: and sweep one area); verify before reporting
                                └ 2 new commits on this branch
- 3. blocked   load-sim       many tenants' real usage on the local stack; thresholds pass or fail
+ 3. ⛔ blocked   load-sim       many tenants' real usage on the local stack; thresholds pass or fail
                                └ nothing answers at http://localhost:8000: start the local stack on a scratch database
- 4. blocked   perf-watch     collect latency, slow queries, pool, CPU and memory while load-sim runs
+ 4. ⛔ blocked   perf-watch     collect latency, slow queries, pool, CPU and memory while load-sim runs
                                └ nothing answers at http://localhost:8000: start the local stack on a scratch database
- 5. run       triage-report  one severity-ranked report of everything above
+ 5. ✅ run       triage-report  one severity-ranked report of everything above
                                └ one report from harden, bug-sweep
 ```
 
@@ -192,20 +192,20 @@ kit: break (full)
 flowchart TB
     subgraph plan["1 · Start and build"]
         direction LR
-        start(["a feature"]) --> handoffr["handoff<br/>read where we left off"]
-        handoffr --> loops1["open-loops<br/>which questions it touches"]
+        start(["💡 a feature"]) --> handoffr["📖 handoff<br/>read where we left off"]
+        handoffr --> loops1["❓ open-loops<br/>which questions it touches"]
         loops1 --> buildc{"one agent<br/>or several?"}
-        buildc -- one --> stack["stack-backend<br/>stack-web · stack-native"]
-        buildc -- several --> fanout["fanout<br/>worktrees, owned paths"]
+        buildc -- one --> stack["🏗️ stack-backend<br/>stack-web · stack-native"]
+        buildc -- several --> fanout["🔀 fanout<br/>worktrees, owned paths"]
         fanout --> stack
     end
     subgraph prove["2 · Prove and record"]
         direction LR
-        wire["wire-api<br/>screen ↔ endpoint"] --> seed["seedbed<br/>demo + test data"]
-        seed --> harden["harden<br/>test first, then break it"]
-        harden --> docs["docsync<br/>changelog · spec · tracker"]
-        docs --> fmap["feature-map<br/>what is built"]
-        fmap --> handoffw(["handoff<br/>log the session"])
+        wire["🔌 wire-api<br/>screen ↔ endpoint"] --> seed["🌱 seedbed<br/>demo + test data"]
+        seed --> harden["🛡️ harden<br/>test first, then break it"]
+        harden --> docs["📚 docsync<br/>changelog · spec · tracker"]
+        docs --> fmap["🗺️ feature-map<br/>what is built"]
+        fmap --> handoffw(["📝 handoff<br/>log the session"])
     end
     plan --> prove
 ```
@@ -261,14 +261,14 @@ git clone https://github.com/kshanxs/shipkit
 
 ```mermaid
 flowchart LR
-    inst["install.sh"] --> claude[".claude/skills/<br/>+ .claude/commands/"]
+    inst["⚙️ install.sh"] --> claude[".claude/skills/<br/>+ .claude/commands/"]
     inst --> agents[".agents/skills/<br/>+ AGENTS.md table"]
     inst --> trae[".trae/skills/"]
     inst --> toml["shipkit.toml<br/><i>detected from the project,<br/>only if missing</i>"]
     inst -. "--hooks" .-> settings[".claude/settings.json<br/>router + docsync stop hook"]
     inst --> check{"every skill and<br/>command resolves?"}
-    check -- yes --> ok(["installed"])
-    check -- no --> fail(["stops with the fix"])
+    check -- yes --> ok(["✅ installed"])
+    check -- no --> fail(["❌ stops with the fix"])
 ```
 
 | Option | Does |
@@ -344,15 +344,15 @@ ship-check takes an optional `ship-check.toml` checklist.
 
 ```mermaid
 flowchart LR
-    toml["shipkit.toml"] --> proj["[project]<br/>kind, tenancy, money, plans"]
+    toml["📄 shipkit.toml"] --> proj["[project]<br/>kind, tenancy, money, plans"]
     toml --> stack["[stack]<br/>api, web and native dirs"]
     toml --> docsync["[docsync]<br/>docs, packages, registers"]
     toml --> hardent["[harden]<br/>matrix + axes"]
     toml --> loopst["[open_loops]<br/>register"]
     toml --> more["… one table per skill<br/>missing table = defaults"]
-    seedt["seedbed.toml"] --> seedbed["seedbed"]
-    loadt["load-scenario.toml"] --> loadsim["load-sim"]
-    shipt["ship-check.toml"] --> shipc["ship-check"]
+    seedt["🌱 seedbed.toml"] --> seedbed["seedbed"]
+    loadt["📈 load-scenario.toml"] --> loadsim["load-sim"]
+    shipt["✅ ship-check.toml"] --> shipc["ship-check"]
 ```
 
 ## Develop
@@ -365,9 +365,8 @@ python3 skills/switchboard/scripts/route.py --write     # after editing skills.t
 
 CI runs both on Python 3.11 and 3.13 for every push and pull request. The layout tests also hold
 the repo to its own rules: every skill has frontmatter, a README, a router entry and commands; this
-README lists every skill; and no private names, home paths or key-shaped strings appear in a public file.
+README lists every skill; and no home paths or key-shaped strings appear in a public file. Set `SHIPKIT_PRIVATE_TERMS` to a file of your own terms to check for those too.
 
-**Roadmap:** shipkit may later replace Zyralum's own project skills, once it covers them in daily use.
 
 ## License
 
