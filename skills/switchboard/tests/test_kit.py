@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+import json
+import os
 import socket
 import subprocess
 import sys
@@ -290,3 +292,19 @@ class Installed(Repo):
         self.write(".claude/commands/break.md")
         self.write("shipkit.toml", CONFIG + "\n")
         self.assertEqual(self.facts().changed, [])
+
+    def facts_from(self, cwd: Path, **env: str) -> dict:
+        clean = {k: v for k, v in os.environ.items() if k != "SHIPKIT_ROOT"}
+        done = subprocess.run(
+            [sys.executable, str(SCRIPTS / "kit.py"), "facts"], cwd=cwd, env={**clean, **env},
+            capture_output=True, text=True, check=True,
+        )  # fmt: skip
+        return json.loads(done.stdout)
+
+    def test_a_shared_install_reads_the_project_it_is_run_from(self):
+        self.assertEqual(Path(self.facts_from(self.root / "apps/api")["root"]), self.root.resolve())
+
+    def test_shipkit_root_still_wins(self):
+        with tempfile.TemporaryDirectory() as other:
+            found = self.facts_from(self.root, SHIPKIT_ROOT=other)
+        self.assertEqual(Path(found["root"]), Path(other).resolve())
