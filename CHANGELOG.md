@@ -36,6 +36,7 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 
 ### Fixed
 
+- doctor.py finds tools in `~/.local/bin` when a non-login shell leaves it off PATH (2026-11-21)
 - kit.py and the autopilot read the project they are run from; with skills linked from a shared shipkit checkout they analyzed the shipkit repository instead (2026-11-21)
 - On a fresh project, `check_seeds.py`, `open_loops.py`, `feature_map.py` and `changelog.py` (the docsync README example) say in one line that their inputs do not exist yet and exit 0, instead of failing (2026-11-11)
 - `isolation_sweep.py` with no server running names the URL it could not reach and says to start the server or pass `--base-url`, with no traceback; exit 2 for a real run, 0 for `--dry-run`; the same goes for an OpenAPI URL that answers an HTTP error such as 401, which gets one line with the URL, the status and a hint about auth or `--base-url` instead of an `HTTPError` traceback (2026-11-11)

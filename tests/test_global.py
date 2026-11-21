@@ -100,6 +100,15 @@ class Global(unittest.TestCase):
         done = subprocess.run([sys.executable, str(SCRIPTS / "doctor.py"), "--json"], env=self.env, cwd=self.home, capture_output=True, text=True)
         self.assertEqual({r["check"]: r["status"] for r in json.loads(done.stdout)["checks"]}["claude_skills"], "ok")
 
+    def test_doctor_finds_a_tool_in_the_users_own_bin(self) -> None:
+        tool = self.home / ".local/bin/shellcheck"
+        tool.parent.mkdir(parents=True)
+        tool.write_text("#!/bin/sh\n")
+        tool.chmod(0o755)
+        env = {**self.env, "PATH": str(Path(sys.executable).parent) + ":/usr/bin:/bin"}
+        done = subprocess.run([sys.executable, str(SCRIPTS / "doctor.py"), "--json"], env=env, cwd=self.home, capture_output=True, text=True)
+        self.assertEqual({r["check"]: r["status"] for r in json.loads(done.stdout)["checks"]}["shellcheck"], "ok")
+
 
 if __name__ == "__main__":
     unittest.main()

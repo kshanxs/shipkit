@@ -35,6 +35,11 @@ def run(*cmd: str) -> str:
     return done.stdout.strip() if done.returncode == 0 else ""
 
 
+def find(tool: str) -> str | None:
+    """On PATH, or in the user's own bin folder, which a non-login shell often leaves off PATH."""
+    return shutil.which(tool) or shutil.which(tool, path=str(Path.home() / ".local" / "bin"))
+
+
 def row(check: str, status: str, detail: str) -> dict:
     return {"check": check, "status": status, "detail": detail}
 
@@ -80,7 +85,7 @@ def checks(cwd: Path | None = None) -> list[dict]:
         identity = run("git", "-C", str(cwd), "config", "user.name") and run("git", "-C", str(cwd), "config", "user.email")
         out.append(row("git_identity", "ok", "set") if identity else row("git_identity", "warn", "user.name or user.email is not set: commits will fail"))
     for tool, why in OPTIONAL.items():
-        out.append(row(tool, "ok", "found") if shutil.which(tool) else row(tool, "warn", f"missing ({why})"))
+        out.append(row(tool, "ok", "found") if find(tool) else row(tool, "warn", f"missing ({why})"))
     names = sorted(p.parent.name for p in SKILLS.glob("*/SKILL.md"))
     home = Path.home()
     out += skill_home(home / ".claude", "claude", names) + skill_home(home / ".codex", "codex", names)
