@@ -28,6 +28,7 @@ steps = [
   { skill = "stack-backend", do = "build the API part; its tests must pass before the next step", when = "scope_api" },
   { skill = "stack-web", do = "build the web part; its checks must pass before the next step", when = "scope_web" },
   { skill = "stack-native", do = "build the mobile part; its checks must pass before the next step", when = "scope_native" },
+  { skill = "stack-cli", do = "build the CLI, script, infrastructure or library part; its tests must pass before the next step", when = "scope_cli" },
   { skill = "wire-api", do = "connect the screens to the endpoints; typed client, query keys, tracker status", when = "scope_wire" },
   { skill = "seedbed", do = "seed data for what changed, so a fresh database, the demo and the tests show it", when = "scope_seed" },
 ]

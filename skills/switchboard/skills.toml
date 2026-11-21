@@ -56,6 +56,16 @@ triggers = [
 paths = ["apps/mobile/**", "mobile/**", "app.json", "app.config.*", "eas.json"]
 with = ["docsync"]
 
+[stack-cli]
+short = ["cli", "shell"]
+summary = "CLI tools, scripts, installers, infrastructure and small libraries: safe re-runs, dry runs, exit codes, portability, tests"
+triggers = [
+  '\bcli\b|\bcommand[- ]line\b|\b(shell|bash|python) scripts?\b|\binstaller\b|\binstall\.sh\b',
+  '\bprovision(er|ing)?\b|\bdotfiles\b|\bsystemd\b|\bcron job\b|\bansible\b|\bterraform\b|\bshellcheck\b',
+]
+paths = ["bin/**", "scripts/**", "*.sh", "**/*.sh", "*.tf", "**/*.tf"]
+with = ["docsync"]
+
 [wire-api]
 short = ["wire"]
 summary = "Wiring a screen to an API endpoint: read the contract, tenant headers, typed client, query keys, mocks, tracker status"

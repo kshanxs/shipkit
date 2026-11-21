@@ -215,6 +215,29 @@ class Autopilot(Repo):
         self.assertIn("/break full", [x["run"] for x in a.not_now])
 
 
+class ToolingProjects(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        git(self.root, "init", "-q", "-b", "main")
+        (self.root / "scripts").mkdir()
+        (self.root / "scripts/setup.sh").write_text("#!/bin/sh\necho one\n")
+        git(self.root, "add", "-A")
+        git(self.root, "commit", "-q", "-m", "base")
+        git(self.root, "checkout", "-q", "-b", "feat")
+
+    def tearDown(self) -> None:
+        self.tmp.cleanup()
+
+    def test_a_script_change_gets_a_build_step_and_a_break(self):
+        (self.root / "scripts/setup.sh").write_text("#!/bin/sh\necho two\n")
+        f = kit.gather(self.root)
+        build = {s.skill: s.state for s in kit.plan("build", f)}
+        self.assertEqual(build["stack-cli"], "run")
+        self.assertEqual(build["stack-backend"], "skip")
+        self.assertEqual({s.skill: s.state for s in kit.plan("break", f)}["harden"], "run")
+
+
 class Wiring(unittest.TestCase):
     def test_members_for_the_installer(self):
         self.assertEqual(kit.members("kit-flow"), ["handoff", "open-loops", "docsync", "feature-map"])
@@ -283,6 +306,18 @@ class Profiles(Repo):
         self.assertEqual(f.stacks["native"], "")
         self.assertFalse(f.stack_exists("native"))
         self.assertIn("profile", kit.Advice().__dataclass_fields__)
+
+
+class AppWithScripts(Repo):
+    def test_an_app_change_does_not_pull_in_the_cli_step(self):
+        self.write("shipkit.toml", CONFIG.replace('surfaces = ["api", "web"]', 'surfaces = ["api", "web", "shell"]'))
+        self.commit("apps/api/app/main.py")
+        self.assertEqual(self.states("build")["stack-cli"], "skip")
+
+    def test_a_script_in_an_app_repo_does_get_it(self):
+        self.write("shipkit.toml", CONFIG.replace('surfaces = ["api", "web"]', 'surfaces = ["api", "web", "shell"]'))
+        self.commit("scripts/deploy.sh")
+        self.assertEqual(self.states("build")["stack-cli"], "run")
 
 
 class Installed(Repo):

@@ -222,6 +222,29 @@ def scope(f: Facts, stack: str, skill: str) -> tuple[str, str]:
     return SKIP, f"the work does not touch the {stack}"
 
 
+SCRIPT_SUFFIXES = (".sh", ".bash", ".zsh", ".ps1", ".tf")
+SCRIPT_DIRS = ("bin/", "scripts/", "cli/")
+
+
+def cond_scope_cli(f: Facts) -> tuple[str, str]:
+    if "stack-cli" in f.routed:
+        return RUN, "the request is about it"
+    traits = f.profile.traits if f.profile else set()
+    if not traits & {"cli", "shell", "library", "infra"}:
+        return SKIP, "no CLI, script, library or infrastructure code"
+    apps = any(f.stack_exists(s) for s in ("api", "web", "native"))
+    in_apps = {p for s in ("api", "web", "native") for p in f.touches(s)}
+    hits = [
+        p for p in f.code_changed
+        if p not in in_apps and (not apps or p.endswith(SCRIPT_SUFFIXES) or p.startswith(SCRIPT_DIRS))
+    ]  # fmt: skip
+    if hits:
+        return RUN, f"{_n(hits, 'changed tooling file')}, starting with {hits[0]}"
+    if apps or f.code_changed:
+        return SKIP, "the work does not touch the scripts or tools"
+    return RUN, "this project is tooling and nothing narrows the work yet"
+
+
 def cond_scope_wire(f: Facts) -> tuple[str, str]:
     api = scope(f, "api", "stack-backend")[0] == RUN
     screen = scope(f, "web", "stack-web")[0] == RUN or scope(f, "native", "stack-native")[0] == RUN
@@ -243,7 +266,7 @@ def cond_scope_seed(f: Facts) -> tuple[str, str]:
 
 
 def cond_code_changes(f: Facts) -> tuple[str, str]:
-    if any(s in f.routed for s in ("harden", "stack-backend", "stack-web", "stack-native", "wire-api")):
+    if any(s in f.routed for s in ("harden", "stack-backend", "stack-web", "stack-native", "stack-cli", "wire-api")):
         return RUN, "the request names code to prove"
     if not f.git:
         return BLOCKED, "not a git repository: nothing to compare against; name an area to harden"
@@ -311,6 +334,7 @@ CONDITIONS = {
     "scope_api": lambda f, **_: scope(f, "api", "stack-backend"),
     "scope_web": lambda f, **_: scope(f, "web", "stack-web"),
     "scope_native": lambda f, **_: scope(f, "native", "stack-native"),
+    "scope_cli": lambda f, **_: cond_scope_cli(f),
     "scope_wire": lambda f, **_: cond_scope_wire(f),
     "scope_seed": lambda f, **_: cond_scope_seed(f),
     "code_changes": lambda f, **_: cond_code_changes(f),
