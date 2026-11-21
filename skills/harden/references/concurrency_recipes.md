@@ -25,16 +25,21 @@ from sqlalchemy import event
 def all_read_before_any_writes(n: int, table: str, engine, timeout: float = 5.0):
     barrier = threading.Barrier(n, timeout=timeout)
     seen: set[int] = set()
+    lock = threading.Lock()
     gate = {"held": 0, "broken": False}
 
     def after(conn, cursor, statement, params, context, executemany):
-        if statement.lstrip().upper().startswith("SELECT") and f" {table}" in statement and id(conn) not in seen:
+        if not statement.lstrip().upper().startswith("SELECT") or f" {table}" not in statement:
+            return
+        with lock:  # only the first n connections wait; a later read must not hang on a spent gate
+            if id(conn) in seen or len(seen) >= n:
+                return
             seen.add(id(conn))
-            gate["held"] += 1
-            try:
-                barrier.wait()
-            except threading.BrokenBarrierError:
-                gate["broken"] = True
+            gate["held"] = len(seen)
+        try:
+            barrier.wait()
+        except threading.BrokenBarrierError:
+            gate["broken"] = True
 
     event.listen(engine.sync_engine, "after_cursor_execute", after)
     try:
