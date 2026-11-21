@@ -245,7 +245,7 @@ class Wiring(unittest.TestCase):
         feature = kit.members("kit-feature")
         for name in ("kit-build", "kit-break", "kit-flow", "stack-backend", "harden", "docsync"):
             self.assertIn(name, feature)
-        self.assertEqual(set(kit.members("autopilot")) | {"autopilot", "switchboard"}, set(route.load()))
+        self.assertEqual(set(kit.members("autopilot")) | {"autopilot", "switchboard", "shipkit-feedback"}, set(route.load()))
         self.assertEqual(kit.members("docsync"), [])
 
     def test_every_step_names_a_skill_and_a_known_condition(self):

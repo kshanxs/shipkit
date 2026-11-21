@@ -2,6 +2,7 @@
 # Install shipkit skills into a project.
 #
 #   ./install.sh <target-project> [--claude|--agents|--trae|--all] [options]
+#   ./install.sh --global [--claude] [--codex] [--hooks] [--uninstall] [--dry-run]    for this user, every project
 #
 # Layouts (any combination; default --all):
 #   --claude    <target>/.claude/skills/<name>/ and slash commands in <target>/.claude/commands/
@@ -25,9 +26,15 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC="$HERE/skills"
 VERSION="$(sed -n 's/^version = "\(.*\)"/\1/p' "$HERE/pyproject.toml" | head -1)"
 
-usage() { sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
+usage() { sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'; exit "${1:-0}"; }
 
 [ $# -ge 1 ] || usage 1
+if [ "$1" = --global ]; then
+  shift
+  command -v python3 >/dev/null || { echo "install.sh: python3 is required" >&2; exit 1; }
+  python3 -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)' || { echo "install.sh: python3 3.11 or newer is required (run skills/switchboard/scripts/doctor.py)" >&2; exit 1; }
+  exec python3 "$SRC/switchboard/scripts/global_install.py" "$@"
+fi
 case "$1" in -h|--help) usage 0 ;; esac
 TARGET="$1"; shift
 [ -d "$TARGET" ] || { echo "install.sh: $TARGET is not a folder" >&2; exit 1; }
