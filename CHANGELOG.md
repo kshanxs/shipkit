@@ -19,6 +19,7 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 
 ### Changed
 
+- harden step 6: a test that still passes with its guard removed may miss the guard, or the guard may be dead or covered by another; find which and fix it, and run new timing tests several times for ties (2026-11-16)
 - kit-build: a Frame step first (the request, assumptions, success criteria as checks, the smallest change), test-first and surgical changes inside each step, and designing an unagreed feature with the user before code (2026-11-12)
 - Kits and the autopilot: an evidence rule; a step is done only with a command run in this session and what it printed, otherwise it is not verified (2026-11-12)
 - harden: fix the cause, one hypothesis at a time, and stop after three failed fixes for one flaw to report a design problem; bug-sweep: a suggested fix names the root cause and says when it is partial (2026-11-12)
