@@ -43,7 +43,7 @@ hostile site: cross-site requests and DNS rebinding (attack matrix, "Local netwo
 | 3. Build | The smallest change that passes them | Run, passing |
 | 4. Break | The attacks from step 1, one test each, against the real API | Each attack has a test and a result |
 | 5. Prove | Each attack that got through stays red until the cause is fixed; then green | Red seen, then green |
-| 6. Check the test | Undo the fix (or remove the guard) and run once more: it must fail. Put the fix back. If it still passes, another guard is covering it (a clean-up at start-up, a filter further up): change the test so it reaches this guard, and run it again. Run a new async or timing test several times; two events in the same millisecond can tie and flake | Seen failing without each guard |
+| 6. Check the test | Undo the fix (or remove the guard) and run once more: it must fail. Put the fix back. If it still passes, find out why: the test never reaches this guard, the guard is dead code, or another guard covers it (a clean-up at start-up, a filter further up). Change the test so it reaches this guard, or remove the dead code, and run it again. Run a new async or timing test several times; two events in the same millisecond can tie and flake | Seen failing without each guard |
 | 7. Record | A bug number, the register row, the changelog line (docsync); every attack's row in the attack log (`attacks.py add`), whatever its result; the run (`attacks.py run`); the matrix cell's "Covered by" | In the same piece of work |
 | 8. Report | `attacks.py report RUN-NNN`, plus the before and after of each fix | Given to the user |
 
