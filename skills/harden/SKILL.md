@@ -32,7 +32,9 @@ Run `python3 $SK/switchboard/scripts/project.py show` first. A section marked **
 that trait; skip it otherwise and put it under "Not tried" with the reason ("not multi-tenant").
 The attacks that fit every project still apply: hostile input, roles, races, retries, a failing
 dependency. A self-hosted server is attacked from the local network and from a browser visiting a
-hostile site: cross-site requests and DNS rebinding (attack matrix, "Local network").
+hostile site: cross-site requests and DNS rebinding (attack matrix, "Local network"). A CLI, script,
+installer, infrastructure code or library has no API to attack: use the
+[tooling attacks](references/tooling_attacks.md), and read "the real API" below as "the real command".
 
 ## The loop
 

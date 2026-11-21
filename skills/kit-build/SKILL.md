@@ -37,6 +37,7 @@ Show the plan as it is. Each step is **run**, **skip** (why) or **blocked** (wha
 | open-loops | the register exists: the questions this work touches |
 | fanout | the request asks for parallel work |
 | stack-backend / stack-web / stack-native | the request or the changes touch that stack (`[stack]` in shipkit.toml) |
+| stack-cli | the project has a CLI, scripts, infrastructure or a library, and the work touches them |
 | wire-api | an API and a screen are both in scope |
 | seedbed | the schema, a model or a migration changes |
 

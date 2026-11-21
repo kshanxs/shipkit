@@ -42,6 +42,7 @@ flowchart LR
         be["stack-backend"]
         web["stack-web"]
         rn["stack-native"]
+        cli["stack-cli"]
         wire["wire-api"]
         seed["seedbed"]
         fan["fanout"]
@@ -76,6 +77,7 @@ flowchart LR
 |---|---|---|
 | [stack-backend](skills/stack-backend/) | `/api` | Backend conventions: modules, tenant isolation (404 for another tenant's record, 403 for its header), one transaction per request, races held by constraints, reviewed migrations, cache and time rules, tests through `uv run`; Node equivalents |
 | [stack-web](skills/stack-web/) | `/web` | Front ends on **Vite** and **Vite+** (`vp`): one API client, typed routes, server vs client state, tenant-keyed queries, forms, accessibility, the checks to run |
+| [stack-cli](skills/stack-cli/) | `/cli` | **CLIs, scripts and infrastructure**: safe re-runs, dry runs, exit codes, portability, tests in a throwaway `HOME` |
 | [stack-native](skills/stack-native/) | `/native` | **React Native / Expo**: Expo Router, dev builds, state homes, secure tokens, long lists, an offline-first device database with a pull-then-push sync protocol |
 | [wire-api](skills/wire-api/) | `/wire` | Wiring a screen to an endpoint without drift: read the contract, generated types, query keys, invalidation, mocks, tracker status |
 | [seedbed](skills/seedbed/) | `/seed` | Idempotent seed data for every feature, driven by a scenario config (`seedbed.toml`): modules, scenarios, personas, the data map; `check_seeds.py` and a runnable example seed |
@@ -195,7 +197,7 @@ flowchart TB
         start(["💡 a feature"]) --> handoffr["📖 handoff<br/>read where we left off"]
         handoffr --> loops1["❓ open-loops<br/>which questions it touches"]
         loops1 --> buildc{"one agent<br/>or several?"}
-        buildc -- one --> stack["🏗️ stack-backend<br/>stack-web · stack-native"]
+        buildc -- one --> stack["🏗️ stack-backend<br/>stack-web · stack-native<br/>stack-cli"]
         buildc -- several --> fanout["🔀 fanout<br/>worktrees, owned paths"]
         fanout --> stack
     end
@@ -217,6 +219,7 @@ flowchart LR
     be["stack-backend"] --> docs["docsync"]
     web["stack-web"] --> docs
     rn["stack-native"] --> docs
+    cli["stack-cli"] --> docs
     wire["wire-api"] -- "tracker status" --> docs
     harden["harden"] -- "attack log" --> docs
     harden -- "test matrix" --> sweep["bug-sweep"]
@@ -304,6 +307,7 @@ Requirements: `bash` and Python 3.11+ (`tomllib`). Node, uv or Expo only where t
 | `/api` `/be` stack-backend | `/harden` `/bth` harden | `/docs` `/ds` docsync |
 | `/web` `/fe` stack-web | `/sweep` `/hunt` bug-sweep | `/fmap` `/features` feature-map |
 | `/native` `/rn` `/mobile` stack-native | `/load` `/sim` load-sim | `/loops` `/oq` open-loops |
+| `/cli` `/shell` stack-cli | | |
 | `/wire` wire-api | `/perf` `/mon` perf-watch | `/handoff` handoff |
 | `/seed` seedbed | `/triage` `/report` triage-report | `/sb` `/route` switchboard |
 | `/fanout` `/par` fanout | `/ship` `/ready` ship-check | `/profile` `/configure` profile |
