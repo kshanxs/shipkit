@@ -159,7 +159,7 @@ def load_target(root: Path) -> dict:
 
 
 def gather(root: Path | None = None, request: str = "") -> Facts:
-    root = (root or route.ROOT).resolve()
+    root = (root or project.find_root()).resolve()  # the project being worked on, not where the skills are installed
     f = Facts(root=root, request=request)
     cfg = root / "shipkit.toml"
     if cfg.exists():
