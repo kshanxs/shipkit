@@ -92,6 +92,10 @@ inserts it idempotently (`INSERT ... ON CONFLICT DO NOTHING`).
   down and up again cleanly.
 - Tests that build tables with `create_all` hide a missing migration: keep one test that runs the
   real chain and compares the result with the models (columns, checks, `ondelete`).
+- SQLAlchemy stores Python `None` in a `JSON` or `JSONB` column as JSON `null` by default, and
+  `IS NOT NULL` lets that row through. Declare nullable columns with `JSONB(none_as_null=True)`.
+  For existing data, filter with `jsonb_typeof(col) <> 'null'` or guard in Python. Test a row cleared
+  by assigning `None`, not only one that never had a value.
 
 ## Cache
 
