@@ -106,8 +106,10 @@ attack log, and the two matrices.
   twice, two runs of one job at once; with **[money]**, a double payment, refund or invoice.
 - **Idempotency:** replay gives `Idempotency-Replayed: true`; in flight gives 409 and `Retry-After`;
   same key with another body gives 422; keys scoped per tenant and user.
-- **Local network** **[self-hosted]**: a state change accepted from another website (no Origin or
-  CSRF check on every POST, PUT, PATCH and DELETE); a Host header not checked against an allow-list
+- **Local network** **[self-hosted]**: a state change accepted from another website (no
+  `Sec-Fetch-Site`, Origin or CSRF check on every POST, PUT, PATCH and DELETE); a JSON route that
+  also parses `text/plain` or a form body, which needs no CORS preflight; an Origin check broken by
+  a reverse proxy that rewrites Host; a Host header not checked against an allow-list
   (DNS rebinding turns a browser on the LAN into an attacker); listening on every interface without
   a password; secrets or tokens readable by other users on the machine, or written to logs.
 - **Scripts and the command line** **[cli]** **[shell]**: input reaching `sh -c`, `eval` or an

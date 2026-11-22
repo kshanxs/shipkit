@@ -127,7 +127,9 @@ by every website they visit. Test, against the real server:
 
 | Attack | Expected |
 |---|---|
-| A POST, PUT, PATCH or DELETE with another site's `Origin` (or none, from a browser form) | Refused (403); nothing changed |
+| A POST, PUT, PATCH or DELETE with `Sec-Fetch-Site: cross-site` or `same-site`, or another site's `Origin` | Refused (403); nothing changed. A script sending neither header may pass |
+| JSON sent as `text/plain` or a form to a JSON route | Refused (415 or 403); nothing changed |
+| The same requests through the reverse proxy the app supports, with `Host` rewritten | Browser requests from the app still work; cross-site ones are still refused |
 | A request with a `Host` header not on the allow-list (DNS rebinding) | Refused (400 or 403) |
 | Every route with no password or token, when one is configured | 401 or 403; only health and the sign-in page answer |
 | The bind address and port | What the docs say (local only, or the LAN); never every interface by surprise |
