@@ -102,6 +102,23 @@ In order of preference:
 A Python check ("does it exist?") stays useful for the clear message on the common path; it is
 never the guard.
 
+**A job that calls an outside provider.** Schedulers resend a slow tick, so overlapping runs are
+normal. Look up, send, then insert sends twice, and the loser's unique-key error rolls back its
+other work. Claim first and send only if the claim won:
+
+```python
+claimed = await db.scalar(
+    insert(Delivery).values(dedupe_key=key).on_conflict_do_nothing().returning(Delivery.id)
+)
+if claimed is not None:
+    await provider.send(message)
+```
+
+Decide what a crash between claim and send means for the message (retry it, or report it). To
+test the race, hold both runs with a barrier **inside the faked provider** and count its calls. A
+gate that wraps `AsyncSession.execute` does not see `session.scalar()`, so that check runs unheld
+and the test passes falsely.
+
 ## 4. Errors halfway
 
 The request's transaction rolls back when it raises. To show a service leaves nothing half-made,
