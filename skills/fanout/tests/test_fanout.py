@@ -119,7 +119,23 @@ class ParallelRun(unittest.TestCase):
     # tests
 
     def test_next_free_numbers(self) -> None:
-        self.assertEqual(parallel.next_free(), {"migration": 40, "question": 99, "bug": 44})
+        self.assertEqual(parallel.next_free(), {"migration": 40, "question": 99, "bug": 44, "attack": 1})
+
+    def test_attack_numbers_come_from_every_branch_and_every_plan(self) -> None:
+        sh("git", "switch", "-q", "-c", "other", cwd=self.root)
+        self.write("docs/testing/attack_log.md", "| ATK-110 | 2026-10-01 | A | B | None | Not a flaw |\n")
+        self.commit(self.root, "docs: an attack")
+        sh("git", "switch", "-q", "main", cwd=self.root)
+        self.assertEqual(parallel.next_free()["attack"], 111)
+        self.plan([self.task("one", ["apps/api/app/one/"], ids={"attacks": ["ATK-111"]})])
+        self.assertEqual(parallel.next_free()["attack"], 112)
+        path = self.root / ".fanout/demo/plan.json"
+        data = json.loads(path.read_text())
+        data["tasks"] = [self.task("two", ["apps/api/app/two/"], ids={"attacks": ["ATK-110"]})]
+        path.write_text(json.dumps(data))
+        code, out = self.cli("check", "demo")
+        self.assertEqual(code, 1)
+        self.assertIn("attack 110 is already used", out)
 
     def test_check_accepts_separate_tasks(self) -> None:
         self.plan(
