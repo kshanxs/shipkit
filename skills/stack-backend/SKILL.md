@@ -121,6 +121,23 @@ uv run alembic upgrade head
 - Tests use the real database and cache when the code does (start them with Docker Compose), with
   one test database per xdist worker, and per git worktree when agents run in parallel (put the
   worktree's folder name in the database name).
+- Build **every** database name a test creates, scratch and migration-check databases included,
+  with one function. Postgres silently truncates names to 63 bytes, which can drop the worker
+  suffix and make workers share a database. Keep the worker at the end and test that names for a
+  long worktree and several workers are unique and at most 63 bytes:
+
+  ```python
+  def db_name(label: str, worktree: str, worker: str) -> str:
+      name = f"{label}_{worktree}_{worker}"
+      if len(name.encode()) <= 63:
+          return name
+      digest = hashlib.sha256(name.encode()).hexdigest()[:10]
+      room = 63 - len(digest) - len(worker.encode()) - 2
+      return f"{label[:room]}_{digest}_{worker}"
+  ```
+
+  The symptom: `pg_database_datname_index` duplicates or `database ... does not exist`, in
+  migration tests, only under `-n`.
 - Write test output files (PDFs, screenshots) to a gitignored folder.
 - Lint and format must pass before a change is done; a deliberate exception gets
   `# noqa: <code> - <reason>` on its line.

@@ -92,7 +92,8 @@ Commit what the tasks build on (a worktree starts from a commit). Then, for each
 (`.fanout-env`), its own dependencies installed from the lock files (`uv sync`, `pnpm install`,
 `npm ci`, `bun install`: never a linked `.venv` or `node_modules`, which would run the main
 checkout's code), and, if `redis = true`, a Redis of its own in Docker. Test databases: name them
-after the worktree folder so two worktrees never drop each other's tables.
+after the worktree folder so two worktrees never drop each other's tables, and shorten every one,
+scratch databases included, to the database's limit with the worker kept last (stack-backend).
 
 **Commits.** Starting a run is the user's permission for agents to commit on their own
 `fanout/<run>/*` branches and for landing to move the integration branch. Bringing the
