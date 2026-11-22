@@ -42,6 +42,7 @@ The tenant rows are **[multi-tenant]**; the role rows apply wherever there is mo
 | Lost update | Two edits of one record at once with different fields | One silently lost | The later stands, on purpose; or a version check (`If-Match`, a version column) where losing one is wrong |
 | Out of order | Pay before the invoice is issued; publish before review; edit after delete | A state that should not exist | The service checks the state and refuses (400 or 409); a deleted record is out of every read |
 | Replay | A used one-time code, a used invite link, a payment webhook twice | Accepted again | Marked used in the same transaction; the webhook's event id kept |
+| Overlapping job and a provider | Two runs of a scheduled job at once, both held after their lookup; count the faked provider's calls | The SMS, email or message is sent twice | Claim the row first (`INSERT ... ON CONFLICT DO NOTHING RETURNING`), send only if claimed; `FOR UPDATE SKIP LOCKED` for follow-up sweeps |
 | Late offline write | A change sent from a device's outbox long after it was made | Silently accepted or silently lost | Judged by the spec's rule (accepted and flagged, refused with a reason, or sent for approval) |
 
 ## 4. Failures
@@ -102,7 +103,7 @@ proved the code.
 | Another tenant's account | A checkout that routes money to another tenant's payout account | Money in the wrong account | The account comes from the server, never the request |
 | Webhook | Twice, late, out of order, bad signature, for another tenant's order | Paid twice; changed by an unsigned call | One payment per provider payment id; signature checked first |
 | Refunds | Two at once, more than paid, while one is pending | Refunded twice or over | One; never over; pending counted as such |
-| Reconciliation | A settlement line missing, repeated, or of another tenant | Matched silently | Flagged for a person |
+| Reconciliation | A settlement line missing, repeated, of another tenant or of another amount; one payment covering several records; a row repeated because offset paging shifted as items arrived | Matched silently or twice | Lines deduplicated by the provider's id, amounts compared, a multi-record payment matched on the sum; anything else flagged for a person |
 | Provider down | The provider fails or times out mid-payment | Marked paid without a confirmed payment | Paid only on confirmation; the checkout can be tried again |
 
 ## 9. Local network **[self-hosted]**
