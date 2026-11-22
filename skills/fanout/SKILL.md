@@ -94,6 +94,12 @@ Commit what the tasks build on (a worktree starts from a commit). Then, for each
 checkout's code), and, if `redis = true`, a Redis of its own in Docker. Test databases: name them
 after the worktree folder so two worktrees never drop each other's tables.
 
+If a project does link dependencies into a worktree, ignore them without a trailing slash (`.venv`,
+`node_modules`) or list them in the worktree's `.git/info/exclude` first: `.venv/` matches only a
+folder, so `git add -A` commits the link, and pulling it replaces the real folder with a link to
+itself. Stage named files. `$F land` refuses a branch that adds these paths. Before a release,
+`git ls-files | grep -E '(^|/)(node_modules|\.venv)(/|$)'` must print nothing.
+
 **Commits.** Starting a run is the user's permission for agents to commit on their own
 `fanout/<run>/*` branches and for landing to move the integration branch. Bringing the
 integration branch into the base, and pushing anything, still needs the user's word.

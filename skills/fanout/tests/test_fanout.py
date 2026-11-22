@@ -223,6 +223,18 @@ class ParallelRun(unittest.TestCase):
         self.assertIsNone(parallel.migrations_dir(self.root))
         self.assertEqual(parallel.next_free()["migration"], 1)
 
+    def test_land_refuses_a_committed_dependency_link(self) -> None:
+        self.write(".gitignore", ".fanout/\nnode_modules/\n")
+        self.commit(self.root, "chore: ignore dependencies")
+        self.plan([self.task("library", ["apps/api/app/library/"])])
+        tree = self.start("library")
+        self.write("apps/api/app/library/__init__.py", "", tree)
+        (tree / "node_modules").symlink_to(self.root / "node_modules")
+        self.commit(tree, "feat: library")
+        code, out = self.cli("land", "demo", "library")
+        self.assertNotEqual(code, 0)
+        self.assertIn("commits dependency paths: node_modules", out)
+
     def test_cleanup_refuses_work_that_has_not_landed(self) -> None:
         self.plan([self.task("aa", ["apps/api/app/aa/"])])
         root = self.start("aa")

@@ -825,6 +825,12 @@ def land_checks(root: Path, changed: list[str], integration: str, task: dict) ->
     return checks
 
 
+def added_dependency_paths(base: str, branch: str, cwd: Path | None = None) -> list[str]:
+    """Dependency folders or links a branch adds. `.venv/` in .gitignore does not match a symlink."""
+    added = git("diff", "--name-only", "--no-renames", "--diff-filter=AT", f"{base}...{branch}", cwd=cwd).splitlines()
+    return [p for p in added if re.search(r"(^|/)(node_modules|\.venv)(/|$)", p)]
+
+
 def cmd_land(args: argparse.Namespace) -> int:
     plan = load(args.run)
     task = plan.task(args.task)
@@ -849,6 +855,10 @@ def cmd_land(args: argparse.Namespace) -> int:
         git("worktree", "add", str(root), branch)
     if git("status", "--porcelain", "--untracked-files=no", cwd=root):
         raise Stop(f"{root} has uncommitted changes; the agent commits its work before it is landed")
+    dependencies = added_dependency_paths(integration, branch, root)
+    if dependencies:
+        shown = ", ".join(dependencies[:3]) + (" ..." if len(dependencies) > 3 else "")
+        raise Stop(f"{task['id']} commits dependency paths: {shown}. Run `git rm -r --cached` on them, ignore them without a trailing slash (`.venv`, `node_modules`), commit, and land again.")
 
     print(f"── Landing {task['id']} ({branch}) on {integration}")
     target = git("rev-parse", integration)

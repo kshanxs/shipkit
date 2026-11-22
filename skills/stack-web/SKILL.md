@@ -78,7 +78,9 @@ other; shared code goes in a package, and a boundary check in CI holds it.
 Run the app's own scripts (see the reference for your toolchain): install from the lock file,
 typecheck, test, lint (compare with the baseline count), build. Tests run in a DOM environment
 (happy-dom or jsdom); a file that needs none says so (`// @vitest-environment node`). If the app
-has no formatter configured, do not run one: it would rewrite every file.
+has no formatter configured, do not run one: it would rewrite every file. Run Vite+ through the
+project's script or `node_modules/.bin/vp`: `npx vp` without the local install fetches an unrelated
+npm package named `vp`.
 
 ## Finishing a change
 
