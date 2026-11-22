@@ -133,6 +133,25 @@ by every website they visit. Test, against the real server:
 | The bind address and port | What the docs say (local only, or the LAN); never every interface by surprise |
 | Secrets and tokens on disk | Readable only by the app's user; never in logs or error pages |
 
+## Changes to users' files, and deletes
+
+For a change that rewrites users' files or deletes items, fixtures prove the logic and only real
+inputs prove the inputs. Reading real data needs the owner's explicit approval, stays on a machine
+they name, and puts no content in tests, logs or reports.
+
+- **Dry-run the whole corpus, read-only.** Write output to a scratch folder and delete it afterwards.
+  Count failures and group them by error before release.
+- **Resolve targets right before a destructive step**, from a fresh read of the source of truth, not
+  from values captured when the work was queued. An empty or unresolvable target is a visible,
+  counted state, never a silent skip.
+- **Identify duplicates by something inside the item:** a content identifier or a checksum, not a
+  name or timestamp. Never remove a candidate better than the copy you keep; keep and report it.
+- **Check a hand-written binary format against a trusted implementation.** Compare structure and
+  payload byte for byte, decode both, then test once against the consumer that must accept it.
+- **Release in stages.** Run a hand-picked sample with one item per edge case (a real duplicate, a
+  look-alike that must survive, an already-correct item, an odd type) and verify each at the source
+  of truth. Then run everything, and verify the end state rather than the job's "done" flag.
+
 ## Load
 
 Only against this machine or a test server, never production, and bounded (a number of requests,
@@ -145,7 +164,8 @@ laptop" is a result; "handles 1,000 customers" is not, without a test at that si
 - Attack only this repository's code on this machine, a test server, or a server the user named.
   Never production, never another party's system.
 - Prove a flaw with the least that shows it: a test, a row count, a status code. No real personal
-  data in tests or reports.
+  data in tests or reports. The one exception is the approved read-only dry run in "Changes to
+  users' files, and deletes", which still keeps content out of tests and reports.
 - A flaw that lets one tenant see another's data, or someone act without the permission, is
   Critical: tell the user at once, and record it under `Security` in the changelog when fixed.
 

@@ -52,6 +52,9 @@ The tenant rows are **[multi-tenant]**; the role rows apply wherever there is mo
 | Error halfway | Raise inside a service after its first write | A half-made record | The request's transaction rolls back; assert no rows, on a fresh session |
 | A slow or failing provider | The SMS, email or payment call times out | The request hangs, or the change is lost | A timeout; the change kept and retried, or refused with a reason |
 | Commit fails after the answer | Make the commit raise | 2xx answered, nothing saved | The commit happens before the answer is sent, on every route, held by a test |
+| Malformed real input | One odd file in a real corpus, in an approved read-only dry run | The live run stops or corrupts it | Failures counted and grouped by error before release |
+| Stale delete target | An identifier captured at queue time that is empty or has changed | The wrong item goes, or the old one silently stays | Re-resolved right before the delete; an unresolved target is counted |
+| Look-alike duplicate | Two different items with the same name and timestamp | A real item deleted | Matched on an intrinsic ID or checksum; a better candidate is kept and reported |
 
 ## 5. Load
 
