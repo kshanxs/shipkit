@@ -44,6 +44,7 @@ Use these and no others; other agents hold the next ones.
   today; landing re-chains it after the migrations that land before yours.
 - Open questions: {questions}
 - Bugs: {bugs}
+- Attacks: {attacks}. Record each with `attacks.py add --id ATK-NNN`.
 
 ## Rules
 

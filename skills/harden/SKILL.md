@@ -190,6 +190,9 @@ A result is **Held** (it did not get through; a test keeps it so), **Fixed BUG-N
 BUG-NNN** or **Not a flaw** (the row says why). Held and Fixed name their test; docsync's checker
 refuses a test that does not exist.
 
+`add` numbers from the current branch. When several open branches share one base, inside a fanout
+run or not, take numbers from `fanout.py ids` or the plan and pass `--id ATK-NNN`.
+
 ## The report
 
 ```markdown

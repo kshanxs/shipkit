@@ -55,6 +55,13 @@ class Writing(LogRepo):
         with self.assertRaises(attacks.AttackLogError):
             attacks.add("Alpha", "Guessed", [], "Probably fine", root=self.root)
 
+    def test_add_takes_a_reserved_id_and_refuses_a_used_or_bad_one(self) -> None:
+        test = [f"{TEST}::{NAME}"]
+        self.assertEqual(attacks.add("Alpha", "Reserved", test, "Held", root=self.root, attack_id="ATK-110"), "ATK-110")
+        for bad in ("ATK-110", "ATK-1", "BUG-111"):
+            with self.assertRaises(attacks.AttackLogError):
+                attacks.add("Alpha", "Again", test, "Held", root=self.root, attack_id=bad)
+
     def test_runs_go_newest_first_and_the_report_comes_from_the_log(self) -> None:
         attacks.add("Alpha", "A fix", [f"{TEST}::{NAME}"], "Fixed BUG-001", root=self.root)
         first = attacks.run("First", ["ATK-001"], "pytest: 1 passed", "not run: no server", "nothing", root=self.root, today="2026-10-27")

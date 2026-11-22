@@ -173,7 +173,7 @@ def _next(ids: list[str], prefix: str) -> str:
     return f"{prefix}-{max(numbers, default=0) + 1:03d}"
 
 
-def add(area: str, tried: str, tests: list[str], result: str, root: Path | None = None, today: str | None = None) -> str:
+def add(area: str, tried: str, tests: list[str], result: str, root: Path | None = None, today: str | None = None, attack_id: str | None = None) -> str:
     """A new attack row under the last one; its ID."""
     if not RESULT.match(result):
         raise AttackLogError(f"A result is Held, Fixed BUG-NNN, Open BUG-NNN or Not a flaw, not {result!r}")
@@ -181,7 +181,12 @@ def add(area: str, tried: str, tests: list[str], result: str, root: Path | None 
         if not tests:
             raise AttackLogError(f"{result}: name the test that holds it (--test file::name)")
     text, attacks, _ = read(root)
-    attack_id = _next([a.id for a in attacks], "ATK")
+    if attack_id is None:
+        attack_id = _next([a.id for a in attacks], "ATK")
+    elif not ATTACK_ID.match(attack_id):
+        raise AttackLogError(f"{attack_id!r} is not an attack ID (ATK-NNN)")
+    elif attack_id in {a.id for a in attacks}:
+        raise AttackLogError(f"{attack_id} is already in the log")
     test_cell = "; ".join(f"`{t}`" for t in tests) if tests else "None"
     row = f"| {attack_id} | {today or date.today().isoformat()} | {_cell(area)} | {_cell(tried)} | {test_cell} | {result} |"
     lines = text.split("\n")
@@ -340,6 +345,7 @@ def main() -> int:
     one.add_argument("area", help="the part of the product attacked, e.g. Billing, Sign-in")
     one.add_argument("tried", help="what was tried, in a sentence")
     one.add_argument("--test", action="append", default=[], help="file::test that holds it (repeatable)")
+    one.add_argument("--id", metavar="ATK-NNN", help="a reserved number, when several open branches share one base")
     result = one.add_mutually_exclusive_group(required=True)
     result.add_argument("--held", action="store_true", help="it did not get through")
     result.add_argument("--fixed", metavar="BUG-NNN", help="it got through and the bug is fixed")
@@ -360,7 +366,7 @@ def main() -> int:
             outcome = (
                 "Held" if args.held else f"Fixed {args.fixed}" if args.fixed else f"Open {args.open}" if args.open else "Not a flaw"
             )
-            print(f"{LOG}: {add(args.area, args.tried, args.test, outcome)} {outcome}")
+            print(f"{LOG}: {add(args.area, args.tried, args.test, outcome, attack_id=args.id)} {outcome}")
         elif args.command == "run":
             print(f"{LOG}: {run(args.scope, args.attacks, args.tests, args.load, args.not_tried)}")
         elif args.command == "report":

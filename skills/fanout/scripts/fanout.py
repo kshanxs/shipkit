@@ -2,7 +2,7 @@
 """Parallel feature work in git worktrees: plan, start, test, land, clean up. Standard library only.
 
     fanout.py new <run> [--base main]           a run plan in .fanout/<run>/plan.json, and its integration branch
-    fanout.py ids [--run <run>]                 the next free migration number, question number and bug number
+    fanout.py ids [--run <run>]                 the next free migration, question, bug and attack number
     fanout.py check <run>                       the plan is safe to start: no shared paths, no reused numbers
     fanout.py hotspots                          the files every feature touches, and how each is merged
     fanout.py brief <run> <task>                the brief to hand the agent for one task
@@ -102,6 +102,7 @@ def settings() -> dict:
         "migrations": fan.get("migrations", ""),
         "questions": cfg.get("open_loops", {}).get("register", f"{docs}/open_questions.md"),
         "bugs": cfg.get("docsync", {}).get("bug_register", f"{docs}/testing/bug_report.md"),
+        "attacks": cfg.get("docsync", {}).get("attack_log", f"{docs}/testing/attack_log.md"),
         "ports": fan.get("ports", DEFAULT_PORTS),
         "redis": bool(fan.get("redis", False)),
         "redis_env_file": fan.get("redis_env_file", ""),
@@ -256,8 +257,8 @@ def refs_outside(run_name: str | None) -> list[str]:
 
 
 def used_numbers(run_name: str | None = None) -> dict[str, int]:
-    """The highest migration, question and bug number on any branch, and in the working tree."""
-    top = {"migration": 0, "question": 0, "bug": 0}
+    """The highest migration, question, bug and attack number on any branch, and in the working tree."""
+    top = {"migration": 0, "question": 0, "bug": 0, "attack": 0}
     conf = settings()
 
     def note(kind: str, text: str, pattern: str) -> None:
@@ -266,22 +267,24 @@ def used_numbers(run_name: str | None = None) -> dict[str, int]:
 
     root = toplevel()
     versions = migrations_dir(root)
-    questions, bugs = conf["questions"], conf["bugs"]
+    questions, bugs, attack_log = conf["questions"], conf["bugs"], conf["attacks"]
     if versions:
         note("migration", "\n".join(p.name for p in (root / versions).glob("*.py")), r"(?m)^(\d{3})_")
     note("question", (root / questions).read_text() if (root / questions).exists() else "", r"### Q-(\d+)")
     note("bug", (root / bugs).read_text() if (root / bugs).exists() else "", r"BUG-(\d+)")
+    note("attack", (root / attack_log).read_text() if (root / attack_log).exists() else "", r"(?m)^\| ATK-(\d+)")
     for ref in refs_outside(run_name):
         if versions:
             note("migration", git("ls-tree", "--name-only", f"{ref}:{versions}", check=False), r"(?m)^(\d{3})_")
         note("question", git("show", f"{ref}:{questions}", check=False), r"### Q-(\d+)")
         note("bug", git("show", f"{ref}:{bugs}", check=False), r"BUG-(\d+)")
+        note("attack", git("show", f"{ref}:{attack_log}", check=False), r"(?m)^\| ATK-(\d+)")
     return top
 
 
 def reserved_numbers(skip_run: str | None = None) -> dict[str, set[int]]:
     """Numbers held by every plan (but skip_run), landed or not."""
-    held: dict[str, set[int]] = {"migration": set(), "question": set(), "bug": set()}
+    held: dict[str, set[int]] = {"migration": set(), "question": set(), "bug": set(), "attack": set()}
     for path in plans_dir().glob("*/plan.json"):
         data = json.loads(path.read_text())
         if data.get("run") == skip_run:
@@ -290,6 +293,7 @@ def reserved_numbers(skip_run: str | None = None) -> dict[str, set[int]]:
             held["migration"] |= {int(m[:3]) for m in task.get("ids", {}).get("migrations", [])}
             held["question"] |= {int(q[2:]) for q in task.get("ids", {}).get("questions", [])}
             held["bug"] |= {int(b[4:]) for b in task.get("ids", {}).get("bugs", [])}
+            held["attack"] |= {int(a[4:]) for a in task.get("ids", {}).get("attacks", [])}
     return held
 
 
@@ -393,7 +397,7 @@ def check_plan(plan: Plan, landed: set[str] | None = None) -> tuple[list[str], l
     used = used_numbers(plan.run)
     held = reserved_numbers(skip_run=plan.run)
     seen: dict[str, str] = {}
-    shapes = {"migrations": (r"\d{3}_[a-z0-9_]+", "migration"), "questions": (r"Q-\d{3}", "question"), "bugs": (r"BUG-\d{3}", "bug")}
+    shapes = {"migrations": (r"\d{3}_[a-z0-9_]+", "migration"), "questions": (r"Q-\d{3}", "question"), "bugs": (r"BUG-\d{3}", "bug"), "attacks": (r"ATK-\d{3,}", "attack")}
     for task in plan.tasks:
         for key, (shape, kind) in shapes.items():
             for value in task.get("ids", {}).get(key, []):
@@ -632,7 +636,7 @@ def cmd_new(args: argparse.Namespace) -> int:
                     "stack_on": None,
                     "owns": ["apps/api/app/example/", "apps/web/src/features/example/", "docs/features/example.md"],
                     "hotspots": ["apps/api/CHANGELOG.md", "docs/feature_status.md"],
-                    "ids": {"migrations": [f"{free['migration']:03d}_example"] if migrations_dir(toplevel()) else [], "questions": [], "bugs": []},
+                    "ids": {"migrations": [f"{free['migration']:03d}_example"] if migrations_dir(toplevel()) else [], "questions": [], "bugs": [], "attacks": []},
                     "skills": ["stack-backend", "stack-web", "docsync"],
                     "checks": ["uv run pytest tests/test_example.py -q"],
                 }
@@ -647,8 +651,8 @@ def cmd_new(args: argparse.Namespace) -> int:
 def cmd_ids(args: argparse.Namespace) -> int:
     used = used_numbers(args.run)
     free = next_free(args.run)
-    for kind in ("migration", "question", "bug"):
-        label = {"migration": "migration", "question": "Q", "bug": "BUG"}[kind]
+    for kind in ("migration", "question", "bug", "attack"):
+        label = {"migration": "migration", "question": "Q", "bug": "BUG", "attack": "ATK"}[kind]
         print(f"{label:9} highest used {used[kind]:03d}, next free {free[kind]:03d}")
     return 0
 
@@ -703,6 +707,7 @@ def cmd_brief(args: argparse.Namespace) -> int:
         "migrations": ", ".join(ids.get("migrations", [])) or "none (ask the orchestrator if you need one)",
         "questions": ", ".join(ids.get("questions", [])) or "none (ask the orchestrator for a number)",
         "bugs": ", ".join(ids.get("bugs", [])) or "none",
+        "attacks": ", ".join(ids.get("attacks", [])) or "none (ask the orchestrator for a number)",
         "skills": ", ".join(task.get("skills", [])) or "docsync",
         "checks": bullets(task.get("checks", []), "the checks of the stack skill for what you changed"),
         "docs_check": f"- `python3 {docsync} --changed --base {plan.start_point(task)}`" if docsync.exists() else "",

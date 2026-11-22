@@ -6,14 +6,14 @@ description: "Orchestrating several agents building features at the same time, e
 # Fanout
 
 Several agents can build features at once only if three things are true: **their tasks share no
-files**, **they never take the same number** (a migration, an open question, a bug), and **one
+files**, **they never take the same number** (a migration, an open question, a bug, an attack), and **one
 orchestrator lands their work, one branch at a time**. This skill is how the orchestrator makes
 those true. Everything mechanical is in one script:
 
 ```bash
 F="python3 $SK/fanout/scripts/fanout.py"     # $SK: .claude/skills, .agents/skills or .trae/skills
 $F new <run>              # plan + integration branch fanout/<run>/integration
-$F ids                    # next free migration / Q / BUG numbers, across every branch
+$F ids                    # next free migration / Q / BUG / ATK numbers, across every branch
 $F check <run>            # the plan is safe: no shared paths, no reused numbers
 $F hotspots               # the shared files and how each one merges
 $F brief <run> <task>     # the brief an agent is given
