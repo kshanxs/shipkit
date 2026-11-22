@@ -32,6 +32,7 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 - install.sh writes shipkit.toml from what the project is (`project.py write`) instead of copying the multi-tenant SaaS example into every project; the example is now opt-in with `--preset saas`, and the profile skill is installed with the switchboard (2026-11-12)
 - Billing, tenant and pricing guidance applies only when the profile has it: bug-sweep areas and checks, harden's sections and attack matrix, stack-backend (access rules without tenants), stack-web, wire-api, load-sim, perf-watch, feature-map (no tiers without priced plans; `tiers` defaults to none when `[project] plans = "none"`), docsync and seedbed mark those parts with the trait they need (2026-11-12)
 - kit.py takes the stack folders shipkit.toml leaves out from the repository instead of assuming `apps/api`, `apps/web` and `apps/mobile` (2026-11-12)
+- stack-web: nested vertical scroll areas on touch screens, where `overscroll-contain` belongs, and how to check it with touch emulation (2026-11-22)
 - README: badges, navigation and Mermaid diagrams (the three skill groups, a feature end to end, how skills hand off, how the switchboard routes, what install.sh writes, shipkit.toml), a note on installing once for every project, and what CI checks (2026-11-11)
 
 ### Fixed

@@ -72,6 +72,14 @@ other; shared code goes in a package, and a boundary check in CI holds it.
   keyboard focus.
 - Decorative elements get `aria-hidden="true"`; icon-only buttons get an `aria-label`.
 - Check keyboard focus, a phone-width viewport and dark mode for every changed screen.
+- Avoid a vertical scroll box inside a scrolling page on touch screens: a swipe on it can trap the
+  page. Cap the rows with "Show more", or release the box under `@media (pointer: coarse)`
+  (`max-height: none; overflow-y: visible; overscroll-behavior: auto`). Use `overscroll-contain`
+  only on overlays (sheets, dialogs, viewers).
+- When this is reported on one page, search every page for `overflow-y-auto`, `overflow-auto`,
+  `max-h-` and `overscroll`. Check with touch emulation (Chrome DevTools Protocol
+  `Emulation.setTouchEmulationEnabled` and `Emulation.setEmitTouchEventsForMouse`), then confirm
+  `matchMedia('(pointer: coarse)').matches`.
 
 ## Validate
 
