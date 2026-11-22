@@ -22,6 +22,7 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 ### Changed
 
 - docsync: the root README.md may use emoji; every other document still may not (2026-11-21)
+- harden: a section for changes that rewrite users' files or delete items: an approved read-only corpus dry run, targets resolved right before deleting, intrinsic duplicate identity, reference checks for binary formats and a staged first run (2026-11-22)
 - The public-repository test no longer embeds a private name; `SHIPKIT_PRIVATE_TERMS` points it at your own list of terms kept outside the repository (2026-11-21)
 - harden step 6: a test that still passes with its guard removed may miss the guard, or the guard may be dead or covered by another; find which and fix it, and run new timing tests several times for ties (2026-11-16)
 - kit-build: a Frame step first (the request, assumptions, success criteria as checks, the smallest change), test-first and surgical changes inside each step, and designing an unagreed feature with the user before code (2026-11-12)
