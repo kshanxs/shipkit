@@ -287,5 +287,5 @@ triggers = [
 
 [shipkit-feedback]
 short = ["skillfix"]
-summary = "Turn a lesson from project work into a generic shipkit pull request or issue"
-triggers = ['\bimprove shipkit\b|\bshipkit feedback\b|\bfield report\b|\bupdate the skill\b']
+summary = "Turn a lesson from project work into a generic shipkit pull request, or a reviewed issue filed automatically on opt-in"
+triggers = ['\bimprove shipkit\b|\bshipkit feedback\b|\bfield report\b|\bupdate the skill\b|\bnew learnings?\b|\bauto(matic)? (learnings?|reports?)\b']
