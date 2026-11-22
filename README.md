@@ -342,7 +342,7 @@ is detected; nothing undetected is assumed:
 | `money` | `none`, `payments` |
 | `plans` | `none`, `tiers` (priced plans) |
 | `auth` | `none`, `local`, `accounts` |
-| `surfaces` | any of `api`, `web`, `native`, `cli`, `shell`, `container`, `library` |
+| `surfaces` | any of `api`, `web`, `native`, `desktop`, `cli`, `shell`, `container`, `library` |
 | `offline` | `true`, `false` |
 
 Kit steps (`needs` in kits.toml), ship-check items (`requires`) and skill sections marked
