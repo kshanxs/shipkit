@@ -21,7 +21,7 @@ picks what to run.**
 · on **uv/Python**, **Vite**, **Vite+** and **React Native**
 
 [Skills](#skills) · [Kits](#kits) · [How they work](#how-the-skills-work) · [Install](#install) ·
-[Slash commands](#slash-commands) · [Configure](#configure) · [Develop](#develop)
+[Slash commands](#slash-commands) · [Configure](#configure) · [Develop](#develop) · [Contributing](#contributing)
 
 </div>
 
@@ -379,6 +379,11 @@ CI runs both on Python 3.11 and 3.13 for every push and pull request. The layout
 the repo to its own rules: every skill has frontmatter, a README, a router entry and commands; this
 README lists every skill; and no home paths or key-shaped strings appear in a public file. Set `SHIPKIT_PRIVATE_TERMS` to a file of your own terms to check for those too.
 
+## Contributing
+
+Using shipkit on any kind of project? [Open an issue](https://github.com/kshanxs/shipkit/issues/new/choose)
+for a bug, a lesson from real work or a new stack, or read [CONTRIBUTING.md](CONTRIBUTING.md) to send
+a pull request. Report vulnerabilities privately through [SECURITY.md](SECURITY.md).
 
 ## License
 
