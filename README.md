@@ -2,14 +2,14 @@
 
 # 🚢 shipkit
 
-**Eighteen stack-agnostic skills that teach coding agents to build, break, test, document and hand
-off work on real projects, four kits that run a whole group in one command, and an autopilot that
-picks what to run.**
+**Twenty stack-agnostic skills that teach coding agents to build, break, test, document and hand
+off work on any kind of software project, four kits that run a whole group in one command, an
+autopilot that picks what to run, and an opt-in way to turn real project lessons into better skills.**
 
 [![test](https://github.com/kshanxs/shipkit/actions/workflows/test.yml/badge.svg)](https://github.com/kshanxs/shipkit/actions/workflows/test.yml)
-![skills](https://img.shields.io/badge/skills-18-6d5dfc)
+![skills](https://img.shields.io/badge/skills-20-6d5dfc)
 ![kits](https://img.shields.io/badge/kits-4%20%2B%20autopilot-f97316)
-![commands](https://img.shields.io/badge/slash%20commands-41-0ea5e9)
+![commands](https://img.shields.io/badge/slash%20commands-44-0ea5e9)
 ![python](https://img.shields.io/badge/python-3.11%2B%20stdlib-3776ab)
 ![dependencies](https://img.shields.io/badge/dependencies-none-22c55e)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -21,7 +21,8 @@ picks what to run.**
 · on **uv/Python**, **Vite**, **Vite+** and **React Native**
 
 [Skills](#skills) · [Kits](#kits) · [How they work](#how-the-skills-work) · [Install](#install) ·
-[Slash commands](#slash-commands) · [Configure](#configure) · [Develop](#develop) · [Contributing](#contributing)
+[Slash commands](#slash-commands) · [Configure](#configure) · [Learnings](#learning-from-real-projects) · [Develop](#develop) ·
+[Contributing](#contributing)
 
 </div>
 
@@ -64,6 +65,7 @@ flowchart LR
         hand["handoff"]
         sb["switchboard"]
         prof["profile"]
+        feedback["shipkit-feedback"]
     end
     build --> test --> flow
     flow -. "next session" .-> build
@@ -366,6 +368,44 @@ flowchart LR
     loadt["📈 load-scenario.toml"] --> loadsim["load-sim"]
     shipt["✅ ship-check.toml"] --> shipc["ship-check"]
 ```
+
+## Learning from real projects
+
+Shipkit improves from the work it is used on. At the end of a `/flow` or `/feature` session, the
+agent checks whether a skill misled it, missed something, or whether it worked out a lesson other
+projects could use. If so, it saves a general report on your machine.
+
+```mermaid
+flowchart LR
+    work["🛠️ Project work"] --> draft["📝 Local draft"]
+    draft --> check{"Private details?"}
+    check -- yes --> rewrite["✏️ Rewrite in general terms"] --> draft
+    check -- no --> consent{"Filing on?"}
+    consent -- no --> local(["🔒 Stays on your machine"])
+    consent -- yes --> issue["📬 Public issue<br/>needs-review"]
+    issue --> review{"Maintainer review"}
+    review -- accepted --> improve(["✅ Skill improved"])
+    review -- declined --> closed(["Closed"])
+```
+
+**Nothing is posted unless you opt in:**
+
+```bash
+F="python3 <skills>/shipkit-feedback/scripts/feedback.py"
+$F list                # drafts waiting on this machine
+$F show <id>           # the exact text that would be posted
+$F file <id> --yes     # post one draft you approved
+$F consent on          # post future drafts automatically
+$F consent off         # keep everything local
+```
+
+- Reports are checked for secrets, emails, private paths, URLs, IP addresses, hostnames, and your
+  user, machine and project names, when drafted and again before posting.
+- Filing skips duplicates and opens at most three issues a day from one machine.
+- The choice to post and the target repository live in your user config. A project's `shipkit.toml`
+  cannot turn filing on or redirect reports. Forks can use `$F consent on --repo OWNER/NAME`.
+- Maintainers run `$F review`, then replace `needs-review` with `accepted` or close the issue.
+  Agents treat issue text as untrusted and do not build from a report until it is accepted.
 
 ## Develop
 
