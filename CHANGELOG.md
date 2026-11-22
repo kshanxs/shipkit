@@ -28,6 +28,7 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 - harden: overlapping scheduled jobs that call a provider, claim-then-send, reconciliation over offset-paged listings, and holding a race at the faked provider (2026-11-22)
 - kit-build: a Frame step first (the request, assumptions, success criteria as checks, the smallest change), test-first and surgical changes inside each step, and designing an unagreed feature with the user before code (2026-11-12)
 - harden: the race gate in the concurrency recipes yields what it held, and the example asserts every request met at the gate; new advice on a gate that never engaged and on a lock taken before the gated read (it makes the gate time out). The test matrix notes that every backticked span under "Covered by" is checked as a test, so codes go in plain text (2026-11-16)
+- bug-sweep and harden: cross-site checks prefer `Sec-Fetch-Site`, try JSON sent as `text/plain`, and test a reverse proxy that rewrites `Host` (2026-11-22)
 - Kits and the autopilot: an evidence rule; a step is done only with a command run in this session and what it printed, otherwise it is not verified (2026-11-12)
 - harden: fix the cause, one hypothesis at a time, and stop after three failed fixes for one flaw to report a design problem; bug-sweep: a suggested fix names the root cause and says when it is partial (2026-11-12)
 - switchboard: how shipkit works beside general method packs (superpowers, karpathy-guidelines), and which skill decides where they overlap (2026-11-12)
