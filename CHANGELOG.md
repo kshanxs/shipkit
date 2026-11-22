@@ -6,6 +6,7 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 
 ### Added
 
+- Public contribution paths: issue forms for bugs, field reports and features, a pull request template, CONTRIBUTING.md and SECURITY.md (2026-11-22)
 - `install.sh --global`: one user-wide install for Claude Code and Codex, with opt-in hooks, a dry run and an uninstall; `doctor.py` reports what this machine lacks, on any Python, with clean `--json`; shipkit-feedback now ships here and finds its repository from the checkout, so forks work (2026-11-21)
 - stack-cli skill (`/cli`, `/shell`) and a build step for CLIs, scripts, infrastructure and libraries; harden gains tooling attacks for projects with no API (2026-11-21)
 - The project profile: a `[project]` table in shipkit.toml (kind, tenancy, money, plans, auth, surfaces, offline), and `switchboard/scripts/project.py` (show, detect, toml, write, has) that detects it from the repository with the evidence for each value, keeps whatever shipkit.toml sets, and never assumes what it cannot find (2026-11-12)

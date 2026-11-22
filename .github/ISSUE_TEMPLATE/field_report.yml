@@ -1,0 +1,64 @@
+name: Field report
+description: Real project work showed that a skill is wrong, outdated or missing a lesson.
+title: "<skill>: <the gap>"
+labels: ["field-report"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Field reports are how shipkit learns from every kind of software project. Describe the lesson so that it helps someone working on a different product.
+
+        This tracker is public. Leave out project and client names, private paths, hostnames, secrets and business details.
+  - type: input
+    id: skill
+    attributes:
+      label: Skill
+      placeholder: "harden, stack-web, fanout"
+    validations:
+      required: true
+  - type: dropdown
+    id: project-kind
+    attributes:
+      label: Kind of project
+      options:
+        - SaaS
+        - Self-hosted app
+        - Web, mobile or desktop app
+        - CLI
+        - Library
+        - Infrastructure or scripts
+        - Container app
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: stack
+    attributes:
+      label: Stack, where it matters
+      placeholder: "FastAPI and Postgres, Tauri, Go, Rails"
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: The failure or discovery, in generic terms.
+    validations:
+      required: true
+  - type: textarea
+    id: lesson
+    attributes:
+      label: Lesson
+      description: What should an agent know or do next time? When does it apply, and when does it not?
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-change
+    attributes:
+      label: Proposed change
+      description: The skill text, check, script or test you would change.
+  - type: checkboxes
+    id: public-safe
+    attributes:
+      label: Public check
+      options:
+        - label: This report contains no secrets, private paths, hostnames, or client or project names.
+          required: true
