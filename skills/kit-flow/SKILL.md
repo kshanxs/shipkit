@@ -37,6 +37,12 @@ Load each skill only when its step starts (the Skill tool, or `$SK/<skill>/SKILL
 - At the start: **handoff** (show), then **open-loops** (what waits on the owner), and say what is
   next.
 
-## 3. Report
+## 3. Learnings (end of a session)
+
+Did a skill mislead you, miss something, or did you work out a technique other projects need? If
+so, follow "Automatic learnings" in the **shipkit-feedback** skill. If not, record nothing. This
+step never blocks the kit, and it posts only when the user has turned filing on.
+
+## 4. Report
 
 One short table: step, result (**done**, **skipped** why, **blocked**), and the files changed.

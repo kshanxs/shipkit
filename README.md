@@ -102,7 +102,7 @@ flowchart LR
 | [feature-map](skills/feature-map/) | `/fmap` | One map of features, sub-features, tiers and what is built; holds the pricing page to it and generates the public catalog |
 | [open-loops](skills/open-loops/) | `/loops` | The open questions register, with what the code does today, what each answer changes, and code anchors that are checked when the code moves |
 | [handoff](skills/handoff/) | `/handoff` | `HANDOFF.md`, the memory between agent sessions: read first, one work log row and updated sections last; Notion as an optional adapter |
-| [shipkit-feedback](skills/shipkit-feedback/) | `/skillfix` | Turns a lesson from project work into a generic shipkit pull request or issue, on your repository or fork |
+| [shipkit-feedback](skills/shipkit-feedback/) | `/skillfix` | Turns a lesson from project work into a generic shipkit pull request or issue, on your repository or fork; can file reviewed learnings automatically once you opt in |
 | [switchboard](skills/switchboard/) | `/sb` | The router: picks the skills a request needs, runs as a Claude Code hook, writes the slash commands and the AGENTS.md table |
 | [profile](skills/profile/) | `/profile` | Fills in `shipkit.toml` from the project: detects its kind, tenants, money, plans, auth, surfaces, code folders and ports, checks every guess in the code, asks only what is left, and writes the profile every skill runs by |
 
