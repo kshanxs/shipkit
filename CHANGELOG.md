@@ -6,9 +6,9 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 
 ### Added
 
-- shipkit-feedback: automatic learnings. Agents save generic drafts locally; `feedback.py` refuses secrets, personal details and project names, removes duplicates, limits filing to three issues a day, and posts only for a user who opted in; a workflow labels each report `needs-review` (2026-11-22)
 - `install.sh --global`: one user-wide install for Claude Code and Codex, with opt-in hooks, a dry run and an uninstall; `doctor.py` reports what this machine lacks, on any Python, with clean `--json`; shipkit-feedback now ships here and finds its repository from the checkout, so forks work (2026-11-21)
 - stack-cli skill (`/cli`, `/shell`) and a build step for CLIs, scripts, infrastructure and libraries; harden gains tooling attacks for projects with no API (2026-11-21)
+- shipkit-feedback: automatic learnings. Agents save generic drafts locally; `feedback.py` refuses secrets, personal details and project names, removes duplicates, limits filing to three issues a day, and posts only for a user who opted in; a workflow labels each report `needs-review` (2026-11-22)
 - The project profile: a `[project]` table in shipkit.toml (kind, tenancy, money, plans, auth, surfaces, offline), and `switchboard/scripts/project.py` (show, detect, toml, write, has) that detects it from the repository with the evidence for each value, keeps whatever shipkit.toml sets, and never assumes what it cannot find (2026-11-12)
 - profile skill (`/profile`, `/configure`): an agent fills in shipkit.toml from the project: detects the profile, the API, web and mobile folders, packages, code roots and ports, checks every guess against the code, asks only what the code cannot answer, and adds to an existing file without changing what is set (2026-11-12)
 - kits.toml `needs`: a step whose traits the profile lacks is skipped with the reason; load-sim and perf-watch need a multi-tenant project. The autopilot prints the profile first and lists `/profile` while shipkit.toml has no `[project]` (2026-11-12)
