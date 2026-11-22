@@ -16,7 +16,7 @@ The [project] table
     money    = "payments"        none | payments
     plans    = "tiers"           none | tiers        (priced plans: a pricing page, a feature map by tier)
     auth     = "accounts"        none | local | accounts
-    surfaces = ["api", "web"]    any of: api, web, native, cli, shell, container, library
+    surfaces = ["api", "web"]    any of: api, web, native, desktop, cli, shell, container, library
     offline  = false             the app keeps working without a network and syncs later
 
 A value set in shipkit.toml always wins; a value left out is detected. Nothing undetected is
@@ -28,8 +28,9 @@ Traits, the words skills, checklists and kits.toml use in `needs` / `requires`:
     accounts       auth is accounts (sign-up)        plans        plans is tiers
     auth           auth is local or accounts         offline      offline is true
     server         an api, a web app or a container  hosted       kind is saas
+                   (a desktop shell's own front end is not a server)
     self-hosted    kind is self-hosted or container-app
-    api, web, native, cli, shell, container, library   that surface is present
+    api, web, native, desktop, cli, shell, container, library   that surface is present
     saas, app, infra, container-app                    that kind (as is self-hosted)
 
 A trait written `!money` means the profile does not have it.
@@ -54,7 +55,7 @@ VALUES = {
     "plans": ("none", "tiers"),
     "auth": ("none", "local", "accounts"),
 }
-SURFACES = ("api", "web", "native", "cli", "shell", "container", "library")
+SURFACES = ("api", "web", "native", "desktop", "cli", "shell", "container", "library")
 PRUNE = {
     ".git", "node_modules", ".venv", "venv", "dist", "build", "__pycache__", ".next", ".expo", "coverage", "target",
     ".turbo", ".cache", "vendor", ".claude", ".agents", ".trae", ".pytest_cache", ".mypy_cache", ".ruff_cache",
@@ -92,6 +93,7 @@ SERVER_DEPS = re.compile(
     r"""@nestjs/core|@hapi/hapi|elysia|next|nuxt|@remix-run/[\w-]+|@sveltejs/kit|actix-web|axum|rocket|warp|gin|echo|fiber)["'\s=<>~^\[]""",
     re.I,
 )
+DESKTOP_DEPS = re.compile(r"""["'](electron|electron-builder|electron-vite|@electron-forge/cli)["']""")
 WEB_DEPS = re.compile(r"""["'](vite|vite-plus|next|nuxt|@sveltejs/kit|@remix-run/react|astro|@angular/core|react-scripts)["']""")
 NATIVE_DEPS = re.compile(r"""["'](expo|react-native)["']""")
 SCRIPT_SERVER = re.compile(r"\b(uvicorn|gunicorn|hypercorn|flask run|manage\.py runserver|node .*server|listen\()")
@@ -174,6 +176,10 @@ def detect(root: Path) -> Detected:
     manifests = [f for f in files if Path(f).name in ("package.json", "pyproject.toml", "requirements.txt", "Cargo.toml", "go.mod", "Gemfile")]
     manifest_text = {m: read(root, m) for m in manifests}
     deps_all = "\n".join(manifest_text.values())
+    tauri_dirs = [parent(f) for f in files if Path(f).name in ("tauri.conf.json", "tauri.conf.json5", "Tauri.toml")]
+    electron = [m for m, t in manifest_text.items() if Path(m).name == "package.json" and DESKTOP_DEPS.search(t)]
+    desktop_ev = [f for f in files if Path(f).name in ("tauri.conf.json", "tauri.conf.json5", "Tauri.toml")] + electron
+    shell_fronts = {parent(d) for d in tauri_dirs} | {parent(m) for m in electron}
 
     # surfaces and where each lives
     api_dirs, web_dirs, native_dirs, cli_ev, lib_ev = [], [], [], [], []
@@ -191,13 +197,13 @@ def detect(root: Path) -> Detected:
             cli_ev.append(m)
         if name == "package.json" and re.search(r'"bin"\s*:', text):
             cli_ev.append(m)
-        if name == "Cargo.toml" and (re.search(r"^\[\[bin\]\]", text, re.M) or f"{folder + '/' if folder else ''}src/main.rs" in files):
+        if name == "Cargo.toml" and folder not in tauri_dirs and (re.search(r"^\[\[bin\]\]", text, re.M) or f"{folder + '/' if folder else ''}src/main.rs" in files):
             cli_ev.append(m)
-        if name == "Cargo.toml" and (re.search(r"^\[lib\]", text, re.M) or f"{folder + '/' if folder else ''}src/lib.rs" in files):
+        if name == "Cargo.toml" and folder not in tauri_dirs and (re.search(r"^\[lib\]", text, re.M) or f"{folder + '/' if folder else ''}src/lib.rs" in files):
             lib_ev.append(m)
         if name == "pyproject.toml" and not SERVER_DEPS.search(text) and m not in cli_ev and re.search(r"^\[project\]", text, re.M):
             lib_ev.append(m)
-        if name == "package.json" and re.search(r'"(exports|main|module)"\s*:', text) and folder not in web_dirs + api_dirs + native_dirs:
+        if name == "package.json" and re.search(r'"(exports|main|module)"\s*:', text) and folder not in web_dirs + api_dirs + native_dirs and m not in electron:
             if not re.search(r'"private"\s*:\s*true', text):
                 lib_ev.append(m)
     for f in files:
@@ -227,6 +233,8 @@ def detect(root: Path) -> Detected:
         surfaces.append("web")
     if native_dirs:
         surfaces.append("native")
+    if desktop_ev:
+        surfaces.append("desktop")
     if cli_ev:
         surfaces.append("cli")
     code_files = [f for f in files if Path(f).suffix.lower() in CODE]
@@ -236,7 +244,7 @@ def detect(root: Path) -> Detected:
         surfaces.append("container")
     if lib_ev and not (api_dirs or web_dirs or native_dirs):
         surfaces.append("library")
-    d.values["surfaces"] = Value(surfaces, True, (api_dirs + web_dirs + native_dirs + cli_ev + shell[:2] + container[:2] + lib_ev)[:6])
+    d.values["surfaces"] = Value(surfaces, True, (desktop_ev + api_dirs + web_dirs + native_dirs + cli_ev + shell[:2] + container[:2] + lib_ev)[:6])
     d.stack = {"api_dir": api_dirs[0] if api_dirs else "", "web_dirs": web_dirs, "native_dir": native_dirs[0] if native_dirs else ""}
 
     # what the code says: count files that mention each thing
@@ -253,7 +261,8 @@ def detect(root: Path) -> Detected:
     signup_files = [f for f in hits(SIGNUP, code_files) if "/test" not in f]
     local_auth = hits(LOCAL_AUTH, [f for f in code_files if any(f.startswith(a + "/") or a == "" for a in api_dirs)] or code_files)
     offline_ev = [f for f in manifests + code_files if OFFLINE.search(read(root, f))][:3]
-    server = bool(api_dirs or web_dirs or any(SCRIPT_SERVER.search(read(root, f)) for f in container[:3]))
+    own_web = [w for w in web_dirs if not desktop_ev or w not in shell_fronts]  # a shell's front end serves nobody
+    server = bool(api_dirs or own_web or any(SCRIPT_SERVER.search(read(root, f)) for f in container[:3]))
 
     # tenancy, money, plans and accounts belong to something that serves people: without an API, a web
     # app or a container, code that merely talks about them (a tool, a library) does not make them so.
@@ -295,7 +304,7 @@ def detect(root: Path) -> Detected:
     else:
         d.values["auth"] = Value("none", False, [])
 
-    if not (server or native_dirs):
+    if not (server or native_dirs or desktop_ev):
         offline_ev = []
     d.values["offline"] = Value(bool(offline_ev), bool(offline_ev), offline_ev)
 
@@ -303,6 +312,8 @@ def detect(root: Path) -> Detected:
     t, m = d.values["tenancy"].value, d.values["money"].value
     if t == "multi-tenant" or (m == "payments" and d.values["auth"].value == "accounts"):
         kind, sure = "saas", t == "multi-tenant" and d.values["tenancy"].sure
+    elif desktop_ev and not server:
+        kind, sure = "app", True
     elif "umbrel-app.yml" in names or (container and not (api_dirs or web_dirs or cli_ev) and not lib_ev):
         kind, sure = "container-app", "umbrel-app.yml" in names
     elif server and container:
@@ -401,7 +412,8 @@ class Profile:
             out.add("auth")
         if v["offline"]:
             out.add("offline")
-        if surfaces & {"api", "web", "container"} or v["kind"] in ("saas", "self-hosted", "container-app"):
+        shell_only = "desktop" in surfaces and v["kind"] == "app" and v["tenancy"] in ("none", "single-user")
+        if surfaces & {"api", "container"} or ("web" in surfaces and not shell_only) or v["kind"] in ("saas", "self-hosted", "container-app"):
             out.add("server")
         if v["kind"] == "saas":
             out.add("hosted")

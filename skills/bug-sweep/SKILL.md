@@ -22,7 +22,7 @@ report). Project specifics live in the project's matrix and `[bug_sweep]` of `sh
 Run `python3 $SK/switchboard/scripts/project.py show` first (`$SK` is the skills folder this skill is
 installed in). An area or checklist item marked
 **[multi-tenant]**, **[money]**, **[accounts]**, **[offline]**, **[hosted]**, **[self-hosted]**,
-**[cli]** or **[shell]** applies only when the profile lists that trait: skip the others, and name
+**[desktop]**, **[cli]** or **[shell]** applies only when the profile lists that trait: skip the others, and name
 what you skipped in the report's "not tried" list. Unmarked items apply to every project.
 
 ## Rules
@@ -69,6 +69,7 @@ Areas, a generic SaaS list; replace with your own under `[bug_sweep] areas`:
 | Access control | **[auth]** | The one password, token or API key: where it is checked, stored and compared; routes that skip it |
 | Tenant context and dependencies | **[multi-tenant]** | How the tenant is resolved and checked on every route |
 | Local network exposure | **[self-hosted]** | Bind address, Origin or CSRF checks on every change, the Host header (DNS rebinding), what answers without a password |
+| Desktop shell | **[desktop]** | IPC command permissions, webview CSP, opener scopes, sidecars, packaged-build paths |
 | Offline cache and sync | **[offline]** | Outbox, idempotency keys, device time, sign-out wipe, shared devices |
 | Billing and money | **[money]** | Checkout, webhooks, refunds, reconciliation, plan changes, seats |
 | Core records | every project | The main entities or files: create, edit, archive, delete, export |
@@ -110,6 +111,9 @@ attack log, and the two matrices.
   CSRF check on every POST, PUT, PATCH and DELETE); a Host header not checked against an allow-list
   (DNS rebinding turns a browser on the LAN into an attacker); listening on every interface without
   a password; secrets or tokens readable by other users on the machine, or written to logs.
+- **Desktop shell** **[desktop]**: an IPC command the webview can call without a permission check;
+  a missing or loose webview CSP; an opener or file scope wider than needed; a sidecar found through
+  `PATH` in a packaged build; a build-time path used at runtime. Test the packaged app, not only dev.
 - **Scripts and the command line** **[cli]** **[shell]**: input reaching `sh -c`, `eval` or an
   unquoted variable; temp files in a shared folder with a guessable name; a failure halfway that
   leaves the machine broken; a second run that does damage; `set -euo pipefail` missing.

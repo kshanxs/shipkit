@@ -42,7 +42,7 @@ Read what the evidence points at, plus the README and the main entry points. Dec
 | `money` | none, payments | **payments**: it charges, invoices, refunds or records fees. A word like "invoice" in a list of features is not payments; code that moves or records money is |
 | `plans` | none, tiers | **tiers**: customers buy priced plans (Free, Pro, ...) and features are sold by plan |
 | `auth` | none, local, accounts | **accounts**: sign-up, sign-in, invites, password reset. **local**: one password, token or API key guards the app |
-| `surfaces` | api, web, native, cli, shell, container, library | every part that exists: a server API, a web front end, a mobile app, a command line, shell scripts, a Dockerfile or compose file, an importable package |
+| `surfaces` | api, web, native, desktop, cli, shell, container, library | every part that exists: a server API, a web front end, a mobile app, a desktop shell (Tauri, Electron; its own front end is not a server), a command line, shell scripts, a Dockerfile or compose file, an importable package |
 | `offline` | true, false | **true** only when the app keeps working with no network and syncs later (a local database and an outbox). A cache or an install-to-home-screen web app is not offline |
 
 Then the rest of the file:

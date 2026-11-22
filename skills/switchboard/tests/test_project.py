@@ -39,6 +39,20 @@ SELF_HOSTED = {
     "Dockerfile": "FROM python:3.12\nCMD uvicorn server:app --port 8527\n",
     "docs/README.md": "# Docs\n",
 }
+TAURI = {
+    "package.json": '{"name": "x", "private": true, "dependencies": {"react": "18"}, "devDependencies": {"vite": "7", "@tauri-apps/cli": "2"}}\n',
+    "vite.config.ts": "export default {}\n",
+    "src/main.tsx": "export {}\n",
+    "src-tauri/tauri.conf.json": "{}\n",
+    "src-tauri/Cargo.toml": '[package]\nname = "x"\nversion = "0.1.0"\n[dependencies]\ntauri = "2"\n',
+    "src-tauri/src/main.rs": "fn main() {}\n",
+    "src-tauri/src/lib.rs": "pub fn run() {}\n",
+}
+ELECTRON = {
+    "package.json": '{"name": "x", "main": "main.js", "devDependencies": {"electron": "33", "vite": "7"}}\n',
+    "main.js": "require('electron')\n",
+    "vite.config.ts": "export default {}\n",
+}
 SHELL = {
     "install.sh": "#!/usr/bin/env bash\nset -euo pipefail\n",
     "scripts/tune.sh": "#!/usr/bin/env bash\n",
@@ -106,6 +120,25 @@ class Detect(unittest.TestCase):
         self.assertEqual(v["tenancy"], "none")
         self.assertEqual(v["money"], "none")
         self.assertFalse(p.has("server"))
+
+    def test_a_tauri_app_is_a_desktop_app_not_a_server(self):
+        v, p, _ = self.values(TAURI)
+        self.assertEqual(v["kind"], "app")
+        self.assertEqual(set(v["surfaces"]), {"web", "desktop"})
+        self.assertTrue(p.has("desktop", "web", "!server", "!self-hosted"))
+
+    def test_an_electron_app_is_a_desktop_app_not_a_library(self):
+        v, p, _ = self.values(ELECTRON)
+        self.assertEqual(v["kind"], "app")
+        self.assertIn("desktop", v["surfaces"])
+        self.assertNotIn("library", v["surfaces"])
+        self.assertTrue(p.has("desktop", "!server"))
+
+    def test_a_desktop_app_with_a_real_server_is_still_a_server(self):
+        files = {**TAURI, "server/pyproject.toml": '[project]\nname = "api"\ndependencies = ["fastapi"]\n', "server/main.py": "from fastapi import FastAPI\n"}
+        v, p, _ = self.values(files)
+        self.assertEqual(v["kind"], "self-hosted")
+        self.assertTrue(p.has("desktop", "api", "server"))
 
 
 class Configured(unittest.TestCase):

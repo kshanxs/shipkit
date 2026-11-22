@@ -14,7 +14,7 @@ tenancy = "multi-tenant"        # none | single-user | multi-user | multi-tenant
 money = "payments"              # none | payments
 plans = "tiers"                 # none | tiers (priced plans)
 auth = "accounts"               # none | local | accounts
-surfaces = ["api", "web", "native"]   # api, web, native, cli, shell, container, library
+surfaces = ["api", "web", "native"]   # api, web, native, desktop, cli, shell, container, library
 offline = true                  # works offline and syncs later
 
 # Where the code is, so the stack skills look in the right place.
