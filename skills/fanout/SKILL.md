@@ -92,7 +92,8 @@ Commit what the tasks build on (a worktree starts from a commit). Then, for each
 (`.fanout-env`), its own dependencies installed from the lock files (`uv sync`, `pnpm install`,
 `npm ci`, `bun install`: never a linked `.venv` or `node_modules`, which would run the main
 checkout's code), and, if `redis = true`, a Redis of its own in Docker. Test databases: name them
-after the worktree folder so two worktrees never drop each other's tables.
+after the worktree folder so two worktrees never drop each other's tables, and shorten every one,
+scratch databases included, to the database's limit with the worker kept last (stack-backend).
 
 If a project does link dependencies into a worktree, ignore them without a trailing slash (`.venv`,
 `node_modules`) or list them in the worktree's `.git/info/exclude` first: `.venv/` matches only a
