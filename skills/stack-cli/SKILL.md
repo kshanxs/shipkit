@@ -34,6 +34,10 @@ trap 'rm -rf "$tmp"' EXIT
 
 - Quote every expansion: `"$path"`, `"${items[@]}"`. Use `--` before user-supplied paths.
 - Guard deletion: `rm -rf "${dir:?}/cache"`.
+- Under `set -e`, an assignment takes the exit status of its command substitution, so
+  `state="ok$([ "$x" = true ] && echo ', extra')"` ends the script, with no message, when the test is false.
+  Give it a fallback (`&& echo ', extra' || true`) or use an `if`. The opposite trap: `local v="$(cmd)"`
+  hides a failing `cmd`, so declare with `local v` first, then assign.
 - macOS ships BSD tools and an old bash: `sed -i`, `readlink -f`, `date -d` and `grep -P` differ.
   Avoid them in portable scripts, or check the platform first.
 - Never pipe a download into a shell without saying so. Download to a file over HTTPS, then run it.
