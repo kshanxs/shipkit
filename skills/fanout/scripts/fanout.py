@@ -12,6 +12,7 @@
     fanout.py land <run> <task> [--full]        rebase, re-chain migrations, regenerate, check, move integration on
     fanout.py status <run>                      every task: branch, worktree, commits, landed or not
     fanout.py cleanup <run> <task>              remove a landed task's worktree, branch and services
+    fanout.py leftovers [--hours 24] [--json]   read-only: containers, worktrees and branches runs left behind
 
 Plans live in the main checkout's .fanout/ (add it to .gitignore), found from any worktree.
 Everything project-specific comes from the [fanout] table of shipkit.toml (references/config.md).
@@ -31,8 +32,10 @@ import socket
 import subprocess
 import sys
 import tempfile
+import time
 import tomllib
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 
 SKILL = Path(__file__).resolve().parents[1]
@@ -964,6 +967,149 @@ def cmd_cleanup(args: argparse.Namespace) -> int:
     return 0
 
 
+# ── leftovers: report only, never remove ─────────────────────────────────────
+
+CONTAINER_PREFIX = "fanout-"
+
+
+def plans_on_disk() -> list[Plan]:
+    found = []
+    for path in sorted(plans_dir().glob("*/plan.json")):
+        try:
+            found.append(Plan(path, json.loads(path.read_text())))
+        except (OSError, ValueError, KeyError) as error:
+            print(f"skipped {path}: {error}", file=sys.stderr)
+    return found
+
+
+def hours_since(stamp: float) -> float:
+    return max(0.0, (time.time() - stamp) / 3600)
+
+
+def containers(cmd: list[str]) -> list[tuple[str, float | None]]:
+    """Every container named fanout-*, running or not, with its age in hours (None when unreadable)."""
+    done = run([*cmd, "ps", "-a", "--filter", f"name={CONTAINER_PREFIX}", "--format", "{{.Names}}\t{{.CreatedAt}}"], check=False, quiet=True)
+    found = []
+    for line in done.stdout.splitlines():
+        name, _, created = line.partition("\t")
+        if not name.startswith(CONTAINER_PREFIX):
+            continue
+        try:
+            age = hours_since(datetime.strptime(created.strip()[:25], "%Y-%m-%d %H:%M:%S %z").timestamp())
+        except ValueError:
+            age = None
+        found.append((name.strip(), age))
+    return found
+
+
+def redis_keys(cmd: list[str], name: str) -> int | None:
+    done = run([*cmd, "exec", name, "redis-cli", "DBSIZE"], check=False, quiet=True)
+    digits = re.findall(r"\d+", done.stdout)
+    return int(digits[-1]) if done.returncode == 0 and digits else None
+
+
+def shown(cmd: list[str]) -> str:
+    return " ".join(part for part in cmd if part != "-n")
+
+
+def find_leftovers(hours: float, docker_cmd: list[str] | None) -> list[dict]:
+    plans = plans_on_disk()
+    where = worktrees()
+    prefix = settings()["prefix"]
+    found: list[dict] = []
+    owners: dict[str, tuple[Plan, dict, dict]] = {}
+
+    def item(kind: str, name: str, reasons: list[str], command: str, run_name: str | None = None, task: str | None = None, **extra) -> None:
+        found.append({"kind": kind, "name": name, "run": run_name, "task": task, "reasons": reasons, "command": command, **extra})
+
+    for plan in plans:
+        state = load_state(plan.run)
+        for task in plan.tasks:
+            entry = state.get(task["id"], {})
+            owners[f"{CONTAINER_PREFIX}{slug(plan.run)}-{task['id']}"] = (plan, task, entry)
+            if entry.get("redis"):
+                owners[entry["redis"]] = (plan, task, entry)
+            branch = plan.branch(task)
+            if not branch_exists(branch):
+                continue
+            tree = where.get(branch)
+            cleanup = f"fanout.py cleanup {plan.run} {task['id']}"
+            dirty = bool(tree and tree.exists() and git("status", "--porcelain", cwd=tree, check=False))
+            reasons: list[str] = []
+            if tree and not tree.exists():
+                reasons.append("worktree folder missing (git worktree prune)")
+            if dirty:
+                reasons.append("uncommitted changes")
+            ahead = int(git("rev-list", "--count", f"{plan.integration}..{branch}", check=False) or 0)
+            if is_ancestor(branch, plan.integration) and entry.get("landed"):
+                reasons.insert(0, "task landed")
+                command = cleanup + (" --force" if dirty else "")
+            elif ahead:
+                age = hours_since(float(git("log", "-1", "--format=%ct", branch) or 0))
+                if age < hours:
+                    continue
+                reasons.insert(0, f"abandoned: last commit {age:.0f}h ago, {ahead} unlanded commit{'s' if ahead != 1 else ''}")
+                command = cleanup + " --force   # deletes the unlanded work: land it first if it is wanted"
+            else:
+                marker = tree / ".fanout-env" if tree else None
+                if marker and marker.exists() and hours_since(marker.stat().st_mtime) < hours:
+                    continue
+                reasons.insert(0, "no commits" + ("" if tree else ", no worktree"))
+                command = cleanup + (" --force" if dirty else "")
+            item("worktree" if tree else "branch", branch, reasons, command, plan.run, task["id"], worktree=str(tree) if tree else None)
+
+    planned = {f"refs/heads/{p.prefix}/{p.run}/" for p in plans}
+    for ref in git("for-each-ref", "--format=%(refname)", f"refs/heads/{prefix}/").splitlines():
+        if any(ref.startswith(p) for p in planned):
+            continue
+        branch = ref.removeprefix("refs/heads/")
+        tree = where.get(branch)
+        command = (f"git worktree remove {tree} && " if tree else "") + f"git branch -D {branch}"
+        item("worktree" if tree else "branch", branch, ["run plan missing"], command, branch.split("/")[1] if branch.count("/") >= 2 else None, worktree=str(tree) if tree else None)
+
+    for name, age in containers(docker_cmd) if docker_cmd else []:
+        owner = owners.get(name)
+        reasons = []
+        if not owner:
+            reasons.append("run plan missing")
+        else:
+            plan, task, entry = owner
+            branch = plan.branch(task)
+            if entry.get("landed") and branch_exists(branch) and is_ancestor(branch, plan.integration):
+                reasons.append("task landed")
+        if age is not None and age >= hours:
+            reasons.append(f"older than {hours:g}h ({age:.0f}h)")
+        if not reasons:
+            continue
+        keys = redis_keys(docker_cmd, name)
+        reasons.append("not reachable" if keys is None else f"{keys} keys")
+        if owner and "task landed" in reasons and owner[2].get("redis") == name:
+            command = f"fanout.py cleanup {owner[0].run} {owner[1]['id']}"
+        else:
+            command = f"{shown(docker_cmd)} rm -f {name}"
+        item("container", name, reasons, command, owner[0].run if owner else None, owner[1]["id"] if owner else None, keys=keys, age_hours=None if age is None else round(age, 1))
+    return found
+
+
+def cmd_leftovers(args: argparse.Namespace) -> int:
+    docker_cmd = docker()
+    found = find_leftovers(args.hours, docker_cmd)
+    if args.json:
+        print(json.dumps({"hours": args.hours, "docker": bool(docker_cmd), "leftovers": found}, indent=2))
+        return 0
+    if not docker_cmd:
+        print("docker is not reachable: containers were not checked", file=sys.stderr)
+    if not found:
+        print("No leftovers.")
+        return 0
+    for entry in found:
+        where = f"  {entry['worktree']}" if entry.get("worktree") else ""
+        print(f"{entry['kind']:9} {entry['name']}  {', '.join(entry['reasons'])}{where}")
+        print(f"          {entry['command']}")
+    print(f"{len(found)} leftover(s). Nothing was removed; run the commands you want.")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1007,6 +1153,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("task")
     p.add_argument("--force", action="store_true")
     p.set_defaults(func=cmd_cleanup)
+    p = sub.add_parser("leftovers", help="read-only: what runs left behind, and the command to clean each up")
+    p.add_argument("--hours", type=float, default=24, help="older than this counts as abandoned (default 24)")
+    p.add_argument("--json", action="store_true")
+    p.set_defaults(func=cmd_leftovers)
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["test"]:
         # Everything after `test` is the test runner's, options included.

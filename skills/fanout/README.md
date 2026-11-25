@@ -24,6 +24,7 @@ The scripts directly (paths shown for a `.claude/skills` install; use `.agents/s
 python3 .claude/skills/fanout/scripts/fanout.py new 2026-11-12-search
 python3 .claude/skills/fanout/scripts/fanout.py check 2026-11-12-search
 python3 .claude/skills/fanout/scripts/fanout.py land 2026-11-12-search search
+python3 .claude/skills/fanout/scripts/fanout.py leftovers   # read-only: what old runs left behind
 ```
 
 The full instructions the agent follows are in [SKILL.md](SKILL.md).
