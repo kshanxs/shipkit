@@ -96,6 +96,14 @@ inserts it idempotently (`INSERT ... ON CONFLICT DO NOTHING`).
   `IS NOT NULL` lets that row through. Declare nullable columns with `JSONB(none_as_null=True)`.
   For existing data, filter with `jsonb_typeof(col) <> 'null'` or guard in Python. Test a row cleared
   by assigning `None`, not only one that never had a value.
+- Renaming a stored value that an HMAC, seal or signature covers (a type or status string inside
+  the signed identity) makes every record issued before the rename fail verification: codes
+  already printed or sent stop verifying. Do not re-seal in the migration, since the migration job
+  often runs without the signing key. Rename the value in the migration (rows kept, a downgrade
+  that renames it back), and in the sealing function map the new name to the one records were
+  sealed under (`SEALED_AS = {"new_type": "old_type"}`), so old and new records seal and verify
+  alike. Test it: seal a record under the old value, rename it as the migration does, and assert it
+  still verifies; the test must fail without the alias.
 
 ## Cache
 
@@ -142,6 +150,10 @@ uv run alembic upgrade head
 
   The symptom: `pg_database_datname_index` duplicates or `database ... does not exist`, in
   migration tests, only under `-n`.
+- A run that crosses midnight (in UTC or in the time zone "today" uses) can fail many
+  date-dependent tests at once. Before blaming the change, re-run only the failing files, and the
+  same tests on a clean checkout of the base branch; failures that also happen there, or vanish on
+  the re-run, are not the change's.
 - Write test output files (PDFs, screenshots) to a gitignored folder.
 - Lint and format must pass before a change is done; a deliberate exception gets
   `# noqa: <code> - <reason>` on its line.
