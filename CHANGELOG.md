@@ -46,6 +46,7 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 
 ### Fixed
 
+- stack-cli: warns that under `set -e` a false test inside an assignment's command substitution ends the script silently (2026-11-25)
 - doctor.py finds tools in `~/.local/bin` when a non-login shell leaves it off PATH (2026-11-21)
 - profile: Tauri and Electron apps get a `desktop` surface and `kind = app` instead of being called self-hosted servers; a real server in the repository still counts, and bug-sweep has a desktop area (2026-11-22)
 - kit.py and the autopilot read the project they are run from; with skills linked from a shared shipkit checkout they analyzed the shipkit repository instead (2026-11-21)
