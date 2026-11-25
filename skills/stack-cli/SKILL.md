@@ -49,6 +49,25 @@ trap 'rm -rf "$tmp"' EXIT
 - Prefer the standard library in a tool that must run before anything is installed.
 - Pass commands as a list, never a shell string built from input.
 
+## Services an installer sets up
+
+- A systemd user unit runs with a minimal `PATH` that usually lacks `~/.local/bin`: set
+  `Environment=PATH=...` in the unit when the service calls tools installed there, or a status page
+  silently shows "none found" instead of failing.
+- User units stop at logout unless lingering is on (`loginctl show-user $USER -p Linger`); check it
+  and tell the user the one command that turns it on, rather than running sudo for them.
+- A reverse proxy in front of a local service (for example `tailscale serve`) makes every request
+  arrive from 127.0.0.1, so "local requests only" checks in that service stop protecting anything.
+  Publish only the paths clients need, and never the admin API.
+- An upstream that hashes or rewrites its own config on start (a plaintext key replaced by its hash)
+  owns that file afterwards: write it once, never overwrite it on re-install, and keep the plaintext
+  value the tool itself needs in a separate mode-600 file.
+- A queue an API pops on read (each record handed out once) needs exactly one persistent reader that
+  stores what it takes; document it, so nobody drains it by hand while debugging.
+- Updating a pinned dependency automatically: back up its state, move, health-check, and move back
+  on failure, recording the outcome where the user will see it. Test the rollback for real by moving
+  to a version known to fail the check.
+
 ## Libraries
 
 Keep the public API small and named. Do not print, exit or change global state from library code.
