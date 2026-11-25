@@ -54,19 +54,25 @@ O="python3 $SK/open-loops/scripts/open_loops.py"
 $O --for apps/api/app/billing docs/features/billing.md   # 1. at the start: the questions this change touches
 $O --show Q-012                                          #    one question, with the code under each anchor today
 $O --list --status Open                                  #    what is open
+$O --next-id                                             # 2. the number for a new question, across branches and worktrees
 $O --changed                                             # 4. what this change set touches, when the register did not change
 $O --write                                               # 5. refresh the counts and every document's list, move anchors
 ```
 
 1. **At the start**, see which questions the change touches. Do not build over an open question:
    build to `Today`, or ask the user if the change needs the answer.
-2. **When something is left undecided**, add it under its area with the next free number, `Open`,
-   today's date, its Context and its Lines (and `checked`). Tell the user in your reply: a question
-   only in a reply or a commit message is lost.
-3. **When the user answers**: `Answered YYYY-MM-DD` (or `Dropped`), an `- **Answer:**` line in their
-   words or a faithful summary, the entry moved under `## Answered`. Then do what the answer says:
-   the code, then the documents in its Where. A tier answer goes into the feature map; a policy
-   answer through the policy check. Add a line to "Changes to this register".
+2. **When something is left undecided**, add it under its area with the number `--next-id` prints
+   (after `git fetch`), `Open`, today's date, its Context and its Lines (and `checked`). Never take
+   one above the highest on your own branch: an unmerged branch, another worktree's uncommitted
+   register or a fanout plan may already hold it, and a clash shows only when the work lands. Tell
+   the user in your reply: a question only in a reply or a commit message is lost.
+3. **When the user answers**, first check that no other branch or worktree has recorded a different
+   answer to the same number (`git log --all -S "Q-012" -- docs/open_questions.md`, and the register
+   in each `git worktree list` folder): two sessions can each record an answer the owner approved
+   separately. If they differ, ask which holds. Then: `Answered YYYY-MM-DD` (or `Dropped`), an
+   `- **Answer:**` line in their words or a faithful summary, the entry moved under `## Answered`. Then
+   do what the answer says: the code, then the documents in its Where. A tier answer goes into the
+   feature map; a policy answer through the policy check. Add a line to "Changes to this register".
 4. **When a change touches a question without answering it**, update its Today line, its
    implications, its Lines and its `checked` date.
 5. **Write the lists and check**: `--write`, then `check_docs.py --changed`. A document with no list

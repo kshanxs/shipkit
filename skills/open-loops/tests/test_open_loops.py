@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -273,6 +274,50 @@ class OpenQuestions(unittest.TestCase):
     def test_for_names_the_file_of_an_anchor_and_says_why(self) -> None:
         found = self.run_script("--for", "apps/api/app/fees/router.py").stdout
         self.assertIn("Why: the gateway takes its fee from each settlement.", found)
+
+    def test_next_id_looks_past_this_branch_to_every_branch_worktree_and_reservation(self) -> None:
+        self.assertEqual(self.run_script("--next-id").stdout.strip(), "Q-004")
+        self.git("init", "-q", "-b", "main")
+        self.git("add", "-A")
+        self.git("commit", "-q", "-m", "chore: start")
+
+        def raise_in(path: Path, number: str) -> None:
+            text = path.read_text(encoding="utf-8")
+            path.write_text(text.replace("## Answered", f"### Q-{number}\n\n**New?**\n\n## Answered"), encoding="utf-8")
+
+        register = self.root / "docs/open_questions.md"
+        self.git("switch", "-q", "-c", "pushed")
+        raise_in(register, "006")
+        self.git("commit", "-q", "-am", "docs: Q-006 on a pushed branch")
+        remote = Path(self.folder.name + "-remote.git")
+        self.addCleanup(shutil.rmtree, remote, True)
+        subprocess.run(["git", "init", "-q", "--bare", str(remote)], check=True)
+        self.git("remote", "add", "origin", str(remote))
+        self.git("push", "-q", "origin", "pushed")
+        self.git("switch", "-q", "main")
+        self.git("branch", "-q", "-D", "pushed")
+        self.assertEqual(self.run_script("--next-id").stdout.strip(), "Q-007")
+
+        self.git("switch", "-q", "-c", "local")
+        raise_in(register, "007")
+        self.git("commit", "-q", "-am", "docs: Q-007 on a local branch")
+        self.git("switch", "-q", "main")
+        self.assertEqual(self.run_script("--next-id").stdout.strip(), "Q-008")
+
+        other = Path(self.folder.name + "-worktree")
+        self.addCleanup(shutil.rmtree, other, True)
+        self.git("worktree", "add", "-q", "-b", "parallel", str(other))
+        raise_in(other / "docs/open_questions.md", "009")
+        found = self.run_script("--next-id")
+        self.assertEqual(found.stdout.strip(), "Q-010")
+        self.assertIn("Q-009", found.stderr)
+        self.assertIn(other.name, found.stderr)
+
+        raise_in(register, "010")
+        self.assertEqual(self.run_script("--next-id").stdout.strip(), "Q-011")
+
+        self.write(".fanout/run1/plan.json", '{"run": "run1", "tasks": [{"id": "a", "ids": {"questions": ["Q-012"]}}]}')
+        self.assertEqual(self.run_script("--next-id").stdout.strip(), "Q-013")
 
 
 if __name__ == "__main__":
