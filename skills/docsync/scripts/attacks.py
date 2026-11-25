@@ -10,6 +10,7 @@
         --tests "uv run pytest: 412 passed" --load "..." --not-tried "..."
     python3 attacks.py report RUN-002   # the harden report, from the log
     python3 attacks.py check            # exit 1 on a problem
+    python3 attacks.py next             # the next free BUG and ATK numbers, across branches and worktrees
 
 The log is `attack_log` in the [docsync] table of shipkit.toml (default
 docs/testing/attack_log.md). Each attack is a row (ATK-NNN) with what was tried, the test that
@@ -18,13 +19,19 @@ holds it and its result: Held (it did not get through), Fixed BUG-NNN, Open BUG-
 (RUN-NNN) naming its attacks, the tests run, the load tried and what was not tried. The script
 writes both with the next number and today's date; `check_docs.py` runs `lint` as its `attacks`
 check, with the bug register beside it.
+
+A new number (from `next`, or `add` without `--id`) is one above the highest found in this tree,
+on every local and remote branch, in every other worktree's working copy (uncommitted numbers live
+only there) and in the numbers a fanout plan reserves. Run `git fetch` first.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
+import subprocess
 import sys
 import tomllib
 from dataclasses import dataclass
@@ -173,6 +180,60 @@ def _next(ids: list[str], prefix: str) -> str:
     return f"{prefix}-{max(numbers, default=0) + 1:03d}"
 
 
+def _git(root: Path, *args: str) -> str | None:
+    done = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
+    return done.stdout if done.returncode == 0 else None
+
+
+def _copies(root: Path, rel: str) -> list[str]:
+    """The text of rel in this tree, in every other worktree's working copy and on every branch."""
+    here = root / rel
+    texts = [here.read_text(encoding="utf-8", errors="replace")] if here.is_file() else []
+    top = _git(root, "rev-parse", "--show-toplevel")
+    if top is None:
+        return texts
+    top_path = Path(top.strip()).resolve()
+    inside = (root.resolve() / rel).relative_to(top_path).as_posix()
+    for line in (_git(root, "worktree", "list", "--porcelain") or "").splitlines():
+        tree = Path(line[len("worktree ") :]) if line.startswith("worktree ") else None
+        if tree is not None and tree.resolve() != top_path and (tree / inside).is_file():
+            texts.append((tree / inside).read_text(encoding="utf-8", errors="replace"))
+    for ref in (_git(root, "for-each-ref", "--format=%(refname)", "refs/heads", "refs/remotes") or "").splitlines():
+        if not ref.endswith("/HEAD"):
+            text = _git(root, "show", f"{ref}:{inside}")
+            if text is not None:
+                texts.append(text)
+    return texts
+
+
+def _reserved(root: Path, key: str) -> list[str]:
+    """IDs a fanout plan reserves under ids.<key>; plans live in the main checkout's .fanout folder."""
+    common = _git(root, "rev-parse", "--path-format=absolute", "--git-common-dir")
+    folders = {root / ".fanout"} | ({Path(common.strip()).parent / ".fanout"} if common else set())
+    held = []
+    for plan in sorted(p for folder in folders for p in folder.glob("*/plan.json")):
+        try:
+            tasks = json.loads(plan.read_text(encoding="utf-8")).get("tasks", [])
+        except (OSError, ValueError):
+            continue
+        held += [i for task in tasks for i in task.get("ids", {}).get(key, [])]
+    return held
+
+
+def next_ids(root: Path | None = None) -> dict[str, str]:
+    """The next free BUG and ATK numbers, looking past this branch."""
+    root = root or ROOT
+    found = {}
+    for prefix, rel, key, pattern in (
+        ("BUG", register_name(root), "bugs", r"\bBUG-(\d+)\b"),
+        ("ATK", log_name(root), "attacks", r"(?m)^\| *ATK-(\d+)"),
+    ):
+        texts = _copies(root, rel) + ["\n".join(f"| {i}" for i in _reserved(root, key))]
+        numbers = [int(n) for text in texts for n in re.findall(pattern, text)]
+        found[prefix] = f"{prefix}-{max(numbers, default=0) + 1:03d}"
+    return found
+
+
 def add(area: str, tried: str, tests: list[str], result: str, root: Path | None = None, today: str | None = None, attack_id: str | None = None) -> str:
     """A new attack row under the last one; its ID."""
     if not RESULT.match(result):
@@ -182,7 +243,7 @@ def add(area: str, tried: str, tests: list[str], result: str, root: Path | None 
             raise AttackLogError(f"{result}: name the test that holds it (--test file::name)")
     text, attacks, _ = read(root)
     if attack_id is None:
-        attack_id = _next([a.id for a in attacks], "ATK")
+        attack_id = max(_next([a.id for a in attacks], "ATK"), next_ids(root)["ATK"], key=lambda i: int(i[4:]))
     elif not ATTACK_ID.match(attack_id):
         raise AttackLogError(f"{attack_id!r} is not an attack ID (ATK-NNN)")
     elif attack_id in {a.id for a in attacks}:
@@ -360,6 +421,7 @@ def main() -> int:
     show = sub.add_parser("report", help="print a run's report")
     show.add_argument("run_id")
     sub.add_parser("check", help="exit 1 on a problem")
+    sub.add_parser("next", help="the next free BUG and ATK numbers, across branches and worktrees")
     args = parser.parse_args()
     try:
         if args.command == "add":
@@ -369,6 +431,9 @@ def main() -> int:
             print(f"{LOG}: {add(args.area, args.tried, args.test, outcome, attack_id=args.id)} {outcome}")
         elif args.command == "run":
             print(f"{LOG}: {run(args.scope, args.attacks, args.tests, args.load, args.not_tried)}")
+        elif args.command == "next":
+            ids = next_ids()
+            print(f"{ids['BUG']}\n{ids['ATK']}")
         elif args.command == "report":
             print(report(args.run_id, _severities()))
         else:

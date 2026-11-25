@@ -9,6 +9,7 @@ The open questions register: check it, count it, and write each document's list 
     python3 open_loops.py --for apps/api/app/billing docs/features/billing.md
     python3 open_loops.py --changed  # open questions that touch what this change set changed
     python3 open_loops.py --show Q-012   # one entry, with the code its Lines point at
+    python3 open_loops.py --next-id      # the number to give a new question
 
 The register is `register` in the [open_loops] table of shipkit.toml (default
 docs/open_questions.md), between `<!-- questions:start -->` and
@@ -62,6 +63,12 @@ Checks:
   lists      a document's list is not what the register says (--write fixes it)
   counts     the counts table is not what the register adds up to (--write fixes it)
 
+`--next-id` prints the number for a new question: one above the highest found
+in this register, the register on every local and remote branch, the working
+copy in every other worktree of the repository (uncommitted numbers live only
+there), and the numbers a fanout plan reserves (.fanout/*/plan.json). Run
+`git fetch` first, so the remote branches are current.
+
 Exit status is 1 when anything is reported. `--changed` and `--for` only
 report; they always exit 0. SHIPKIT_ROOT points the script at another tree.
 """
@@ -70,6 +77,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import os
 import re
 import subprocess
@@ -450,6 +458,57 @@ def remind_once() -> list[str]:
     return found
 
 
+def _git(*args: str, cwd: Path | None = None) -> str | None:
+    done = subprocess.run(["git", "-C", str(cwd or ROOT), *args], capture_output=True, text=True)
+    return done.stdout if done.returncode == 0 else None
+
+
+def copies_elsewhere(rel: Path) -> list[tuple[str, str]]:
+    """(where, text) for each copy of rel outside this working tree: every other worktree's working copy, every branch."""
+    top = _git("rev-parse", "--show-toplevel")
+    if top is None:
+        return []
+    top_path = Path(top.strip()).resolve()
+    inside = (ROOT.resolve() / rel).relative_to(top_path).as_posix()
+    found = []
+    for line in (_git("worktree", "list", "--porcelain") or "").splitlines():
+        tree = Path(line[len("worktree ") :]) if line.startswith("worktree ") else None
+        if tree is not None and tree.resolve() != top_path and (tree / inside).is_file():
+            found.append((f"worktree {tree}", (tree / inside).read_text(encoding="utf-8", errors="replace")))
+    for ref in (_git("for-each-ref", "--format=%(refname)", "refs/heads", "refs/remotes") or "").splitlines():
+        if not ref.endswith("/HEAD"):
+            text = _git("show", f"{ref}:{inside}")
+            if text is not None:
+                found.append((f"branch {ref.removeprefix('refs/heads/').removeprefix('refs/remotes/')}", text))
+    return found
+
+
+def reserved_by_fanout() -> list[str]:
+    """Question numbers a fanout run's plan reserves; plans live in the main checkout's .fanout folder."""
+    common = _git("rev-parse", "--path-format=absolute", "--git-common-dir")
+    folders = {ROOT / ".fanout"} | ({Path(common.strip()).parent / ".fanout"} if common else set())
+    held = []
+    for plan in sorted(p for folder in folders for p in folder.glob("*/plan.json")):
+        try:
+            tasks = json.loads(plan.read_text(encoding="utf-8")).get("tasks", [])
+        except (OSError, ValueError):
+            continue
+        held += [q for task in tasks for q in task.get("ids", {}).get("questions", [])]
+    return held
+
+
+def next_id() -> tuple[str, str]:
+    """The number for a new question, and where the highest one in use was found."""
+    here = (ROOT / REGISTER).read_text(encoding="utf-8") if (ROOT / REGISTER).is_file() else ""
+    sources = [("this working tree", here), *copies_elsewhere(REGISTER), *(("a fanout plan", q) for q in reserved_by_fanout())]
+    top, where = 0, "nowhere: the register is empty"
+    for source, text in sources:
+        for number in re.findall(r"\bQ-(\d{3,})\b", text):
+            if int(number) > top:
+                top, where = int(number), f"Q-{int(number):03d} in {source}"
+    return f"Q-{top + 1:03d}", where
+
+
 def show(question: Question) -> str:
     """One entry as the register has it, then each anchor with the line of code it points at today."""
     head = f"{question.id} · {question.kind} · {question.status}{' ' + question.closed if question.closed else ''} · {question.area}"
@@ -491,8 +550,14 @@ def main() -> int:
     parser.add_argument("--base", help="with --changed: also count commits since this ref")
     parser.add_argument("--staged", action="store_true", help="with --changed: judge only what is staged for commit")
     parser.add_argument("--show", metavar="Q-NNN", help="print one entry, with the code its Lines point at")
+    parser.add_argument("--next-id", action="store_true", help="print the number for a new question, checked across branches and worktrees")
     args = parser.parse_args()
 
+    if args.next_id:
+        found, where = next_id()
+        print(found)
+        print(f"open questions: highest in use is {where}", file=sys.stderr)
+        return 0
     if not (ROOT / REGISTER).exists():
         print(f"open questions: {REGISTER} does not exist yet; nothing to check (start one from the skill's references/open_questions.example.md)")
         return 0

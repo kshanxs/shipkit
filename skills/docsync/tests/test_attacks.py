@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import sys
 import unittest
@@ -150,6 +151,41 @@ class CommandLine(LogRepo):
         self.assertEqual(refused.returncode, 2)
         checked = subprocess.run([sys.executable, script, "check"], env=env, capture_output=True, text=True, check=False)
         self.assertEqual(checked.returncode, 0, checked.stdout)
+
+
+class NextNumbers(LogRepo):
+    """New BUG and ATK numbers look past this branch: other branches, other worktrees, fanout plans."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        for args in (("init", "-q", "-b", "main"), ("config", "user.email", "test@example.com"), ("config", "user.name", "Test"),
+                     ("config", "commit.gpgsign", "false"), ("add", "-A"), ("commit", "-q", "-m", "baseline")):
+            self.git(*args)
+
+    def git(self, *args: str) -> str:
+        return subprocess.run(["git", *args], cwd=self.root, capture_output=True, text=True, check=True).stdout
+
+    def test_next_numbers_count_branches_worktrees_and_reservations(self) -> None:
+        self.assertEqual(attacks.next_ids(self.root), {"BUG": "BUG-003", "ATK": "ATK-002"})
+        self.git("switch", "-q", "-c", "other")
+        self.append("docs/testing/bug_report.md", "| BUG-004 | Low | `a.py` | On a branch | A fix |\n")
+        self.git("commit", "-q", "-am", "a bug on a branch")
+        self.git("switch", "-q", "main")
+        self.assertEqual(attacks.next_ids(self.root)["BUG"], "BUG-005")
+
+        other = Path(str(self.root) + "-worktree")
+        self.addCleanup(shutil.rmtree, other, True)
+        self.git("worktree", "add", "-q", "-b", "parallel", str(other))
+        attacks.add("Alpha", "In the other worktree", [f"{TEST}::{NAME}"], "Held", root=other, attack_id="ATK-007")
+        self.assertEqual(attacks.next_ids(self.root)["ATK"], "ATK-008")
+        self.assertEqual(attacks.add("Alpha", "Here", [f"{TEST}::{NAME}"], "Held", root=self.root), "ATK-008")
+
+        self.write(".fanout/run1/plan.json", '{"run": "run1", "tasks": [{"id": "a", "ids": {"bugs": ["BUG-009"], "attacks": ["ATK-010"]}}]}')
+        self.assertEqual(attacks.next_ids(self.root), {"BUG": "BUG-010", "ATK": "ATK-011"})
+        shown = subprocess.run([sys.executable, str(SCRIPTS / "attacks.py"), "next"], env={"SHIPKIT_ROOT": str(self.root), "PATH": "/usr/bin:/bin"},
+                               capture_output=True, text=True, check=False)
+        self.assertEqual(shown.returncode, 0, shown.stderr)
+        self.assertEqual(shown.stdout.split(), ["BUG-010", "ATK-011"])
 
 
 if __name__ == "__main__":

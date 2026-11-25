@@ -68,7 +68,8 @@ priced plans (`[project] plans = "none"`), it goes under its area and there is n
 
 ### A bug fix
 
-1. Find or file its row in the bug register (`docs/testing/bug_report.md`): the next free `BUG-NNN`,
+1. Find or file its row in the bug register (`docs/testing/bug_report.md`): the next free `BUG-NNN`
+   from `attacks.py next` (it also looks at other branches, other worktrees and fanout plans),
    a severity (Critical, High, Medium, Low), where, what is wrong, what closes it.
 2. Write the test that fails because of the bug; watch it fail. If none can be written, say why.
 3. Fix the cause; look for the same mistake elsewhere. Run the tests.

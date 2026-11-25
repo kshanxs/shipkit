@@ -23,6 +23,7 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 
 ### Changed
 
+- open-loops and docsync: a new question, bug or attack number is one above the highest on any local or remote branch, in any other worktree's uncommitted copy and in fanout plans, not just on the current branch (`open_loops.py --next-id`, `attacks.py next`, and `attacks.py add` without `--id`); before recording an answer, check that no other branch or worktree has answered the question differently (2026-11-25)
 - docsync: the root README.md may use emoji; every other document still may not (2026-11-21)
 - harden: a section for changes that rewrite users' files or delete items: an approved read-only corpus dry run, targets resolved right before deleting, intrinsic duplicate identity, reference checks for binary formats and a staged first run (2026-11-22)
 - The public-repository test no longer embeds a private name; `SHIPKIT_PRIVATE_TERMS` points it at your own list of terms kept outside the repository (2026-11-21)
