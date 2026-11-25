@@ -90,6 +90,14 @@ has no formatter configured, do not run one: it would rewrite every file. Run Vi
 project's script or `node_modules/.bin/vp`: `npx vp` without the local install fetches an unrelated
 npm package named `vp`.
 
+**Checking in a real browser on a Linux server.** A headless Chromium on a fresh server often fails
+to start with `error while loading shared libraries`. Run `ldd <chromium binary> | grep "not found"`
+to list what is missing and install only those packages (or `npx playwright install-deps`, which
+installs many more). Use a browser build that is already in the Playwright cache through
+`executablePath` (from an environment variable, never a hard-coded path) rather than downloading
+another. Measure layout after CSS transitions finish, and select the exact element under test (give a
+decorative SVG a data attribute): an icon's `<svg>` matches a bare `svg` selector.
+
 ## Finishing a change
 
 1. The validation above, for each app you changed.
