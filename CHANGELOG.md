@@ -28,6 +28,7 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 
 - stack-web: a global reduced-motion rule makes infinite animations flicker; stop looping animations under reduced motion instead (2026-11-26)
 - stack-backend: an embedded SQLite section for Node (`node:sqlite`): one module for the database, pragmas and file mode, migrations with a backup first, `db check`, hot copies, a WAL restore drill, index parity with an existing search, and test state folders set before import (2026-11-26)
+- stack-web: check contrast once per theme, and status text against its own tint (2026-11-25)
 - stack-web: how to run a headless browser check on a Linux server with missing shared libraries, and two measuring pitfalls (2026-11-25)
 - stack-cli: what to get right when an installer sets up services: PATH in user units, lingering, proxies that make every request local, self-rewriting configs, pop-on-read queues and tested rollbacks (2026-11-25)
 - open-loops and docsync: a new question, bug or attack number is one above the highest on any local or remote branch, in any other worktree's uncommitted copy and in fanout plans, not just on the current branch (`open_loops.py --next-id`, `attacks.py next`, and `attacks.py add` without `--id`); before recording an answer, check that no other branch or worktree has answered the question differently (2026-11-25)

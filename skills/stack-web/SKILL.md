@@ -78,6 +78,10 @@ other; shared code goes in a package, and a boundary check in CI holds it.
   `animation: none !important` on it under `prefers-reduced-motion: reduce`, and keep the state
   readable without motion (colour, shape, an icon). Check with Playwright's
   `reducedMotion: 'reduce'` page option.
+- With several themes or palettes, run the contrast check in a real browser once per theme, not only
+  on the default. Measure text against the background it actually sits on: status text on its own
+  tinted chip (red on red at 15%) often passes on the page and fails on the chip, and palettes
+  derived from another source need their text roles lifted until every one passes.
 - Avoid a vertical scroll box inside a scrolling page on touch screens: a swipe on it can trap the
   page. Cap the rows with "Show more", or release the box under `@media (pointer: coarse)`
   (`max-height: none; overflow-y: visible; overscroll-behavior: auto`). Use `overscroll-contain`
