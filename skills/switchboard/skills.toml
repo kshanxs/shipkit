@@ -97,6 +97,7 @@ triggers = [
   '\b(several|multiple|many|two|three) (agents|subagents)\b|\bsub-?agents\b',
   '\bworktrees?\b|\bintegration branch\b|\bfanout/[\w-]+/',
   '\bmerge conflicts?\b',
+  '\bleftover (containers?|worktrees?|branches)\b',
 ]
 paths = [".fanout/**"]
 

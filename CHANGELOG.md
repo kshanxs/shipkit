@@ -6,6 +6,7 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 
 ### Added
 
+- fanout: `fanout.py leftovers [--hours N] [--json]`, a read-only report of what finished or abandoned runs left behind: `fanout-*` containers whose plan is missing, whose task landed or that are older than N hours (with their Redis key count), and worktrees and branches of landed, abandoned or planless tasks, each with the exact command to clean it up (2026-11-25)
 - Public contribution paths: issue forms for bugs, field reports and features, a pull request template, CONTRIBUTING.md and SECURITY.md (2026-11-22)
 - `install.sh --global`: one user-wide install for Claude Code and Codex, with opt-in hooks, a dry run and an uninstall; `doctor.py` reports what this machine lacks, on any Python, with clean `--json`; shipkit-feedback now ships here and finds its repository from the checkout, so forks work (2026-11-21)
 - stack-cli skill (`/cli`, `/shell`) and a build step for CLIs, scripts, infrastructure and libraries; harden gains tooling attacks for projects with no API (2026-11-21)

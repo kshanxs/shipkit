@@ -21,6 +21,7 @@ $F start <run> <task>     # make the worktree and set it up (or `join` from insi
 $F status <run>
 $F land <run> <task> [--full]
 $F cleanup <run> <task>
+$F leftovers [--hours 24] [--json]   # read-only: what finished or abandoned runs left behind
 $F test                   # the full suite, one checkout at a time
 ```
 
@@ -147,6 +148,22 @@ Resolve in the task's worktree, `git add`, `git rebase --continue`, `$F land` ag
 3. With the user's word, bring the integration branch into the base (`git merge --ff-only` when
    the base has not moved; otherwise rebase it first and check again).
 4. `$F cleanup` each task; delete the integration branch.
+
+## Leftovers
+
+`cleanup` only removes tasks that landed, so an abandoned run leaves its Redis containers (named
+`fanout-<run>-<task>`; `--rm` only removes one when it stops) and its worktrees and branches
+behind. `$F leftovers` lists, for every plan in `.fanout/` and every `fanout-*` container on the
+machine:
+
+- containers whose run plan is missing, whose task landed, or older than `--hours` (default 24),
+  with their Redis `DBSIZE` when they answer;
+- worktrees and branches of landed tasks, of tasks with no commit newer than `--hours`
+  (abandoned), and of runs whose plan is gone, with uncommitted changes called out.
+
+Each comes with the command that cleans it up (`fanout.py cleanup <run> <task>`, `docker rm -f
+<name>` or `git branch -D <branch>`). It removes nothing and always exits 0; `--json` prints one
+document for other tools. Read before running a `--force` command: it deletes unlanded work.
 
 ## Rules
 

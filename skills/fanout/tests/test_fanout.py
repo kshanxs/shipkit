@@ -48,7 +48,9 @@ def migration(rev: str, down: str | None) -> str:
     return MIGRATION.format(name=rev, rev=rev, down=f'"{down}"' if down else "None", down_label=down or "")
 
 
-class ParallelRun(unittest.TestCase):
+class RepoCase(unittest.TestCase):
+    """A throwaway repository with a migration, registers and a hotspot; no tests of its own."""
+
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp())
         self.root = self.tmp / "repo"
@@ -116,8 +118,8 @@ class ParallelRun(unittest.TestCase):
         self.assertEqual(code, 0, out)
         return path
 
-    # tests
 
+class ParallelRun(RepoCase):
     def test_next_free_numbers(self) -> None:
         self.assertEqual(parallel.next_free(), {"migration": 40, "question": 99, "bug": 44, "attack": 1})
 
@@ -259,6 +261,155 @@ class ParallelRun(unittest.TestCase):
         code, out = self.cli("cleanup", "demo", "aa")
         self.assertEqual(code, 2)
         self.assertIn("has not landed", out)
+
+
+STUB_DOCKER = """#!/bin/sh
+# A stand-in for docker: lists the containers in $STUB_PS, answers DBSIZE from $STUB_KEYS, logs every call.
+echo "$*" >> "$STUB_LOG"
+case "$1" in
+  info) exit 0 ;;
+  ps) cat "$STUB_PS" ;;
+  exec)
+    keys=$(grep "^$2 " "$STUB_KEYS" | cut -d' ' -f2)
+    [ -n "$keys" ] || { echo "Error: container $2 is not running" >&2; exit 1; }
+    echo "$keys" ;;
+  *) exit 1 ;;
+esac
+"""
+
+
+class Leftovers(RepoCase):
+    """`fanout.py leftovers` reports what an abandoned or finished run left behind, and changes nothing."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.bin = self.tmp / "bin"
+        self.bin.mkdir()
+        stub = self.bin / "docker"
+        stub.write_text(STUB_DOCKER)
+        stub.chmod(0o755)
+        self.ps, self.keys, self.log = self.tmp / "ps.txt", self.tmp / "keys.txt", self.tmp / "docker.log"
+        for path in (self.ps, self.keys, self.log):
+            path.write_text("")
+        env = {"PATH": f"{self.bin}{os.pathsep}{os.environ['PATH']}", "STUB_PS": str(self.ps), "STUB_KEYS": str(self.keys), "STUB_LOG": str(self.log)}
+        self.stub_env = mock.patch.dict(os.environ, env)
+        self.stub_env.start()
+
+    def tearDown(self) -> None:
+        self.stub_env.stop()
+        super().tearDown()
+
+    def container(self, name: str, hours_old: float, keys: int | None = None) -> None:
+        from datetime import datetime, timedelta, timezone
+
+        created = (datetime.now(timezone.utc) - timedelta(hours=hours_old)).strftime("%Y-%m-%d %H:%M:%S +0000 UTC")
+        with self.ps.open("a") as out:
+            out.write(f"{name}\t{created}\n")
+        if keys is not None:
+            with self.keys.open("a") as out:
+                out.write(f"{name} {keys}\n")
+
+    def leftovers(self, *argv: str, docker: list[str] | None = None) -> tuple[int, str]:
+        with mock.patch.object(parallel, "docker", return_value=docker):
+            return self.cli("leftovers", *argv)
+
+    def old_commit(self, root: Path, message: str, hours_old: int) -> None:
+        sh("git", "add", "-A", cwd=root)
+        date = f"@{int(__import__('time').time()) - hours_old * 3600} +0000"
+        with mock.patch.dict(os.environ, {"GIT_COMMITTER_DATE": date, "GIT_AUTHOR_DATE": date}):
+            sh("git", "commit", "-q", "-m", message, cwd=root)
+
+    def test_containers_of_a_missing_plan_a_landed_task_or_too_old_are_listed_with_keys(self) -> None:
+        self.plan([self.task("aa", ["apps/api/app/aa/"]), self.task("bb", ["apps/api/app/bb/"]), self.task("dd", ["apps/api/app/dd/"])])
+        sh("git", "branch", "fanout/demo/aa", "fanout/demo/integration", cwd=self.root)
+        (self.root / ".fanout/demo/state.json").write_text(json.dumps({"aa": {"landed": "abc", "redis": "fanout-demo-aa"}}))
+        self.container("fanout-demo-aa", 1, keys=3)
+        self.container("fanout-demo-bb", 30, keys=12)  # its task is still working, but the container is old
+        self.container("fanout-demo-dd", 1, keys=5)  # in use: not a leftover
+        self.container("fanout-gone-x", 72, keys=0)  # no plan for run "gone"
+        self.container("fanout-gone-y", 72)  # not reachable: no DBSIZE
+        self.container("someone-else", 500)  # not ours
+        code, out = self.leftovers(docker=["docker"])
+        self.assertEqual(code, 0, out)
+        self.assertIn("fanout-demo-aa", out)
+        self.assertIn("task landed", out)
+        self.assertIn("fanout.py cleanup demo aa", out)
+        self.assertIn("fanout-demo-bb", out)
+        self.assertIn("older than 24h", out)
+        self.assertIn("docker rm -f fanout-demo-bb", out)
+        self.assertIn("12 keys", out)
+        self.assertNotIn("fanout-demo-dd", out)
+        self.assertIn("run plan missing", out)
+        self.assertIn("docker rm -f fanout-gone-x", out)
+        self.assertIn("0 keys", out)
+        self.assertIn("fanout-gone-y", out)
+        self.assertIn("not reachable", out)
+        self.assertNotIn("someone-else", out)
+        code, out = self.leftovers("--hours", "48", docker=["docker"])
+        self.assertNotIn("fanout-demo-bb", out)
+
+    def test_worktrees_and_branches_of_landed_abandoned_and_planless_tasks_are_listed(self) -> None:
+        self.plan([self.task("aa", ["apps/api/app/aa/"]), self.task("bb", ["apps/api/app/bb/"]), self.task("cc", ["apps/api/app/cc/"])])
+        trees = {t: self.start(t) for t in ("aa", "bb", "cc")}
+        self.write("apps/api/app/aa/x.py", "", trees["aa"])
+        self.commit(trees["aa"], "feat: aa")
+        self.assertEqual(self.cli("land", "demo", "aa")[0], 0)
+        self.write("apps/api/app/bb/x.py", "", trees["bb"])
+        self.old_commit(trees["bb"], "feat: bb", hours_old=72)
+        self.write("apps/api/app/bb/y.py", "", trees["bb"])  # uncommitted work
+        self.write("apps/api/app/cc/x.py", "", trees["cc"])
+        self.commit(trees["cc"], "feat: cc")  # fresh: still being worked on
+        sh("git", "branch", "fanout/old/zz", "main", cwd=self.root)  # a run whose plan is gone
+        code, out = self.leftovers()
+        self.assertEqual(code, 0, out)
+        self.assertIn("fanout/demo/aa", out)
+        self.assertIn("fanout.py cleanup demo aa", out)
+        self.assertIn(str(trees["aa"]), out)
+        self.assertIn("fanout/demo/bb", out)
+        self.assertIn("abandoned", out)
+        self.assertIn("1 unlanded commit", out)
+        self.assertIn("uncommitted changes", out)
+        self.assertIn("fanout.py cleanup demo bb --force", out)
+        self.assertNotIn("fanout/demo/cc", out)
+        self.assertIn("fanout/old/zz", out)
+        self.assertIn("git branch -D fanout/old/zz", out)
+        self.assertNotIn("fanout/demo/integration", out)
+
+    def test_json_is_valid_and_docker_missing_is_reported(self) -> None:
+        self.plan([self.task("aa", ["apps/api/app/aa/"])])
+        sh("git", "branch", "fanout/demo/aa", "fanout/demo/integration", cwd=self.root)  # started, no commits, no worktree
+        code, out = self.leftovers("--json")
+        self.assertEqual(code, 0)
+        data = json.loads(out)
+        self.assertFalse(data["docker"])
+        [item] = data["leftovers"]
+        self.assertEqual((item["kind"], item["run"], item["task"]), ("branch", "demo", "aa"))
+        self.assertEqual(item["command"], "fanout.py cleanup demo aa")
+        self.container("fanout-gone-x", 72, keys=0)
+        code, out = self.leftovers("--json", docker=["docker"])
+        data = json.loads(out)
+        [box] = [i for i in data["leftovers"] if i["kind"] == "container"]
+        self.assertEqual((box["name"], box["keys"], box["command"]), ("fanout-gone-x", 0, "docker rm -f fanout-gone-x"))
+
+    def test_nothing_is_removed(self) -> None:
+        self.plan([self.task("aa", ["apps/api/app/aa/"])])
+        tree = self.start("aa")
+        self.write("apps/api/app/aa/x.py", "", tree)
+        self.commit(tree, "feat: aa")
+        self.assertEqual(self.cli("land", "demo", "aa")[0], 0)
+        self.container("fanout-demo-aa", 100, keys=1)
+        before = sh("git", "for-each-ref", cwd=self.root), sh("git", "worktree", "list", cwd=self.root)
+        self.assertEqual(self.leftovers(docker=["docker"])[0], 0)
+        self.assertEqual((sh("git", "for-each-ref", cwd=self.root), sh("git", "worktree", "list", cwd=self.root)), before)
+        self.assertTrue(tree.exists())
+        calls = self.log.read_text().split()
+        self.assertNotIn("rm", calls)
+        self.assertNotIn("stop", calls)
+
+    def test_no_leftovers_says_so(self) -> None:
+        code, out = self.leftovers(docker=["docker"])
+        self.assertEqual(code, 0)
+        self.assertIn("No leftovers", out)
 
 
 if __name__ == "__main__":
