@@ -16,3 +16,29 @@ The same rules as SKILL.md, for an API in Node (Express, Fastify or NestJS) with
 
 Run Python tooling for scripts in a mixed repository through uv (`uv run python scripts/x.py`),
 so the scripts get the project's pinned interpreter and dependencies.
+
+## Embedded SQLite (node:sqlite)
+
+For a dependency-free server or a local store, the built-in `node:sqlite` module replaces a driver.
+The same rules as the Migrations section apply, plus these (a field report from a server with an
+embedded database and a search index):
+
+1. `node:sqlite` may still be a release candidate. Keep every call (open, migrate, check, hot copy)
+   in one module, so an API change touches one file.
+2. On open: `chmod 600` when the file is created, `PRAGMA journal_mode=WAL`, `PRAGMA
+   foreign_keys=ON` and a `busy_timeout`. Use numbered `NNN_name.sql` migrations, each applied in a
+   transaction with its version row in a `schema_migrations` table. Never edit an applied file.
+3. Before applying a new migration to a database that holds data, run `VACUUM INTO
+   '<backups>/db-<migration>.db'` and keep the last N copies.
+4. Take hot copies with the `backup()` API, not `cp`: a copy made while a WAL is being written can
+   be torn.
+5. Give the project a `db check` command: `PRAGMA integrity_check`, `PRAGMA foreign_key_check`, the
+   journal mode, pending migrations, the file mode and, for FTS5, `INSERT INTO t(t) VALUES
+   ('integrity-check')`.
+6. A WAL streamer (Litestream or similar) needs a restore drill: write a marker, wait, restore to a
+   scratch path and look for the marker. A restore that succeeds can still miss the latest write.
+7. FTS5's bm25 ranks differently from a substring scorer. When the index must agree with an
+   existing search, port that scorer, use FTS5 for snippets and stemmed matching, and keep a parity
+   script that compares the top N results over sample queries.
+8. Tests: point the state folder at a temporary directory **before** the first import of any module
+   that reads it at load time. Run each `node --test` file in its own process.

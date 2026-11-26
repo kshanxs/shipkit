@@ -72,6 +72,12 @@ other; shared code goes in a package, and a boundary check in CI holds it.
   keyboard focus.
 - Decorative elements get `aria-hidden="true"`; icon-only buttons get an `aria-label`.
 - Check keyboard focus, a phone-width viewport and dark mode for every changed screen.
+- A global reduced-motion rule (`* { animation-duration: 0.01ms !important }`) fits one-shot
+  transitions but makes an `infinite` animation (a pulse, a spinner, a flowing SVG dash) run
+  thousands of cycles a second, which flickers. Give looping animations a class and set
+  `animation: none !important` on it under `prefers-reduced-motion: reduce`, and keep the state
+  readable without motion (colour, shape, an icon). Check with Playwright's
+  `reducedMotion: 'reduce'` page option.
 - Avoid a vertical scroll box inside a scrolling page on touch screens: a swipe on it can trap the
   page. Cap the rows with "Show more", or release the box under `@media (pointer: coarse)`
   (`max-height: none; overflow-y: visible; overscroll-behavior: auto`). Use `overscroll-contain`

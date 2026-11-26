@@ -119,6 +119,7 @@ def config() -> dict:
         "attack_log_start": raw.get("attack_log_start", ""),
         "racing_markers": raw.get("racing_markers", []),
         "naming": raw.get("naming", "snake"),
+        "naming_exempt": raw.get("naming_exempt", []),
         "plans_dir": raw.get("plans_dir", f"{docs}/plans"),
         "plan_sources": raw.get("plan_sources", []),
         "no_plan": raw.get("no_plan", []),
@@ -291,16 +292,19 @@ def check_naming(cfg: dict) -> list[str]:
     problems = []
     if not docs.is_dir():
         return []
+    exempt_names = cfg.get("naming_exempt", [])
     for directory, names, files in os.walk(docs):
         names[:] = [n for n in names if n not in PRUNE]
         here = Path(directory)
         for name in names:
-            if not DIRNAME.match(name):
+            if not DIRNAME.match(name) and not exempt(rel(here / name), exempt_names):
                 problems.append(f"{rel(here / name)}/: folder names are lowercase words joined by - or _")
         for name in files:
             if not name.endswith(".md") or name in ("README.md", "CHANGELOG.md"):
                 continue
             path = here / name
+            if exempt(rel(path), exempt_names):
+                continue
             in_plans = here == plans
             if DATED.match(name):
                 if not in_plans:
