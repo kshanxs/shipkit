@@ -2,74 +2,59 @@
 
 # 🚢 shipkit
 
-**Twenty stack-agnostic skills that teach coding agents to build, break, test, document and hand
-off work on any kind of software project, four kits that run a whole group in one command, an
-autopilot that picks what to run, and an opt-in way to turn real project lessons into better skills.**
+### Agent skills that build, break, document and hand off software, and get better with every project.
+
+Built for the way I work with coding agents: test first, break it on purpose, leave the docs
+better than I found them, and feed every lesson back into the skills.
 
 [![test](https://github.com/kshanxs/shipkit/actions/workflows/test.yml/badge.svg)](https://github.com/kshanxs/shipkit/actions/workflows/test.yml)
-![skills](https://img.shields.io/badge/skills-20-6d5dfc)
-![kits](https://img.shields.io/badge/kits-4%20%2B%20autopilot-f97316)
-![commands](https://img.shields.io/badge/slash%20commands-44-0ea5e9)
+![skills](https://img.shields.io/badge/skills-25-6d5dfc)
+![slash commands](https://img.shields.io/badge/slash%20commands-44-0ea5e9)
 ![python](https://img.shields.io/badge/python-3.11%2B%20stdlib-3776ab)
 ![dependencies](https://img.shields.io/badge/dependencies-none-22c55e)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-![Claude Code](https://img.shields.io/badge/Claude%20Code-d97757)
-![Cursor](https://img.shields.io/badge/Cursor-111827)
-![Codex](https://img.shields.io/badge/Codex-10a37f)
-![Trae](https://img.shields.io/badge/Trae-ff4b4b)
-· on **uv/Python**, **Vite**, **Vite+** and **React Native**
+Claude Code · Cursor · Codex · Trae, on any stack: Python, Node, **Vite**, **Vite+**, **React Native**, shell.
 
-[Skills](#skills) · [Kits](#kits) · [How they work](#how-the-skills-work) · [Install](#install) ·
-[Slash commands](#slash-commands) · [Configure](#configure) · [Learnings](#learning-from-real-projects) · [Develop](#develop) ·
-[Contributing](#contributing)
+[The loop](#the-loop) · [Quick start](#quick-start) · [Skills](#skills) · [Kits](#kits) · [Taste](#the-taste-behind-it) ·
+[Self-improving](#learning-from-real-projects) · [Install](#install) · [Commands](#slash-commands) · [Contributing](#contributing)
 
 </div>
 
 ---
 
-Each skill is a folder with a `SKILL.md` (the instructions the agent follows), a short `README.md`,
-and where it helps, standard-library Python scripts, references and tests. Nothing about a
-particular product is baked in: paths, tiers, scenarios and checklists come from one `shipkit.toml`
-in your project, which the installer writes from what the project is, and the [profile](skills/profile/)
-skill checks. Its `[project]` table (kind, tenancy, money, plans, auth, surfaces) decides what runs:
-a self-hosted tool never gets billing checks, a library never gets a many-tenant load test, and a
-multi-tenant SaaS with payments gets all of it.
+## Why this exists
+
+Coding agents are fast, and they forget. They skip the tenant check, ship without a test, leave the
+changelog stale, and repeat last month's mistake. shipkit is my answer: a set of skills, each one a
+folder of instructions an agent follows literally, with a few small scripts for the mechanical parts
+and tests that keep the whole thing honest.
+
+Nothing about a product is baked in. Paths, tiers, scenarios and checklists come from one
+`shipkit.toml` in your project, which the installer writes from what the project actually is.
+
+## The loop
 
 ```mermaid
 flowchart LR
-    subgraph build["🏗️ Build"]
-        direction TB
-        be["stack-backend"]
-        web["stack-web"]
-        rn["stack-native"]
-        cli["stack-cli"]
-        wire["wire-api"]
-        seed["seedbed"]
-        fan["fanout"]
-    end
-    subgraph test["🧪 Break and Test"]
-        direction TB
-        harden["harden"]
-        sweep["bug-sweep"]
-        load["load-sim"]
-        perf["perf-watch"]
-        triage["triage-report"]
-        ship["ship-check"]
-    end
-    subgraph flow["📚 Docs and Flow"]
-        direction TB
-        docs["docsync"]
-        fmap["feature-map"]
-        loops["open-loops"]
-        hand["handoff"]
-        sb["switchboard"]
-        prof["profile"]
-        feedback["shipkit-feedback"]
-    end
-    build --> test --> flow
-    flow -. "next session" .-> build
+    build["🏗️ Build<br/>conventions, wiring, seed data"] --> test["🧪 Break & test<br/>harden, sweep, load, report"]
+    test --> docs["📚 Docs & flow<br/>changelog, map, questions, handoff"]
+    docs --> learn["🧠 Learn<br/>lessons from real work"]
+    learn -. "better skills" .-> build
 ```
+
+Each turn leaves the next one easier. A session ends with a handoff, the open questions are kept
+current, and a lesson from real work can go back into shipkit as a pull request or an issue.
+
+## Quick start
+
+```bash
+git clone https://github.com/kshanxs/shipkit
+./shipkit/install.sh path/to/your-project
+```
+
+Then, in your agent, ask for `/profile` once so shipkit can check what it detected. After that, say
+**"run shipkit"** (or `/shipkit`). The autopilot reads the repository and runs what fits right now.
 
 ## Skills
 
@@ -77,50 +62,50 @@ flowchart LR
 
 | Skill | Command | What it does |
 |---|---|---|
-| [stack-backend](skills/stack-backend/) | `/api` | Backend conventions: modules, tenant isolation (404 for another tenant's record, 403 for its header), one transaction per request, races held by constraints, reviewed migrations, cache and time rules, tests through `uv run`; Node equivalents |
+| [stack-backend](skills/stack-backend/) | `/api` | Backend conventions: modules, tenant isolation (404 for another tenant's record, 403 for its header), one transaction per request, races held by constraints, reviewed migrations, tests through `uv run`; Node equivalents |
 | [stack-web](skills/stack-web/) | `/web` | Front ends on **Vite** and **Vite+** (`vp`): one API client, typed routes, server vs client state, tenant-keyed queries, forms, accessibility, the checks to run |
-| [stack-cli](skills/stack-cli/) | `/cli` | **CLIs, scripts and infrastructure**: safe re-runs, dry runs, exit codes, portability, tests in a throwaway `HOME` |
-| [stack-native](skills/stack-native/) | `/native` | **React Native / Expo**: Expo Router, dev builds, state homes, secure tokens, long lists, an offline-first device database with a pull-then-push sync protocol |
+| [stack-cli](skills/stack-cli/) | `/cli` | **CLIs, scripts and infrastructure**: safe re-runs, dry runs, honest exit codes, portability, unattended runs, tests in a throwaway `HOME` |
+| [stack-native](skills/stack-native/) | `/native` | **React Native / Expo**: Expo Router, dev builds, state homes, secure tokens, long lists, an offline-first device database with a pull-then-push sync |
 | [wire-api](skills/wire-api/) | `/wire` | Wiring a screen to an endpoint without drift: read the contract, generated types, query keys, invalidation, mocks, tracker status |
-| [seedbed](skills/seedbed/) | `/seed` | Idempotent seed data for every feature, driven by a scenario config (`seedbed.toml`): modules, scenarios, personas, the data map; `check_seeds.py` and a runnable example seed |
-| [fanout](skills/fanout/) | `/fanout` | Several agents in git worktrees at once: a plan with owned paths and reserved numbers, briefs, per-worktree ports and installs, landing one branch at a time with re-chained migrations |
+| [seedbed](skills/seedbed/) | `/seed` | Idempotent seed data for every feature, driven by `seedbed.toml`: modules, scenarios, personas, the data map |
+| [fanout](skills/fanout/) | `/fanout` | Several agents in git worktrees at once: owned paths, reserved numbers, per-worktree ports, landing one branch at a time |
 
 ### Break & Test
 
 | Skill | Command | What it does |
 |---|---|---|
-| [harden](skills/harden/) | `/harden` | Test first, then break it on purpose; every flaw a failing test before the fix. A test matrix with pairwise cases, an OpenAPI-driven cross-tenant sweep, a fuzz and burst runner |
-| [bug-sweep](skills/bug-sweep/) | `/sweep` | Review new commits or sweep an area for leaks, permission gaps, races, sync and money bugs, from the matrix's gaps; verify before reporting |
-| [load-sim](skills/load-sim/) | `/load` | Many tenants' real usage from a scenario config (`load-scenario.toml`): Poisson traffic, profiles, replayed changes, abuse probes, thresholds, demand estimate; a stub server to prove the harness |
-| [perf-watch](skills/perf-watch/) | `/perf` | What to collect during a run: latency per endpoint, slow and N+1 queries, pool, cache, CPU and memory, duplicates, growth per tenant |
-| [triage-report](skills/triage-report/) | `/triage` | One severity-ranked report from a sweep or a run: evidence, repro, links at the commit, fixes, matrix coverage, what was not tried |
+| [harden](skills/harden/) | `/harden` | Test first, then break it on purpose; every flaw gets a failing test before the fix. A test matrix, an OpenAPI-driven cross-tenant sweep, a fuzz and burst runner |
+| [bug-sweep](skills/bug-sweep/) | `/sweep` | Review new commits or sweep an area for leaks, permission gaps, races, sync and money bugs; verify every finding before reporting it |
+| [load-sim](skills/load-sim/) | `/load` | Many tenants' real usage from `load-scenario.toml`: Poisson traffic, abuse probes, thresholds, a demand estimate |
+| [perf-watch](skills/perf-watch/) | `/perf` | What to collect during a run: latency per endpoint, slow and N+1 queries, pool, cache, CPU and memory |
+| [triage-report](skills/triage-report/) | `/triage` | One severity-ranked report from a sweep or a run: evidence, repro, links at the commit, fixes, what was not tried |
 | [ship-check](skills/ship-check/) | `/ship` | A read-only launch-readiness audit against a configurable checklist; every DONE must cite a real file |
 
 ### Docs & Flow
 
 | Skill | Command | What it does |
 |---|---|---|
-| [docsync](skills/docsync/) | `/docs` | The documentation contract: changelogs per package, specs, the tracker, bug and attack registers, releases; `check_docs.py` as a script, a stop hook and git hooks |
-| [feature-map](skills/feature-map/) | `/fmap` | One map of features, sub-features, tiers and what is built; holds the pricing page to it and generates the public catalog |
-| [open-loops](skills/open-loops/) | `/loops` | The open questions register, with what the code does today, what each answer changes, and code anchors that are checked when the code moves |
-| [handoff](skills/handoff/) | `/handoff` | `HANDOFF.md`, the memory between agent sessions: read first, one work log row and updated sections last; Notion as an optional adapter |
-| [shipkit-feedback](skills/shipkit-feedback/) | `/skillfix` | Turns a lesson from project work into a generic shipkit pull request or issue, on your repository or fork; can file reviewed learnings automatically once you opt in |
+| [docsync](skills/docsync/) | `/docs` | The documentation contract: changelogs per package, specs, the tracker, bug and attack registers, releases; enforced by a script, a stop hook and git hooks |
+| [feature-map](skills/feature-map/) | `/fmap` | One map of features, sub-features, tiers and what is built; keeps the pricing page honest |
+| [open-loops](skills/open-loops/) | `/loops` | The open questions register: what the code does today, what each answer would change, code anchors checked when the code moves |
+| [handoff](skills/handoff/) | `/handoff` | `HANDOFF.md`, the memory between agent sessions: read first, one work-log row and updated sections last |
+| [shipkit-feedback](skills/shipkit-feedback/) | `/skillfix` | Turns a lesson from project work into a generic shipkit pull request or issue; files reviewed learnings only once you opt in |
 | [switchboard](skills/switchboard/) | `/sb` | The router: picks the skills a request needs, runs as a Claude Code hook, writes the slash commands and the AGENTS.md table |
-| [profile](skills/profile/) | `/profile` | Fills in `shipkit.toml` from the project: detects its kind, tenants, money, plans, auth, surfaces, code folders and ports, checks every guess in the code, asks only what is left, and writes the profile every skill runs by |
+| [profile](skills/profile/) | `/profile` | Fills in `shipkit.toml` from the project: kind, tenants, money, plans, auth, surfaces, folders and ports; checks every guess in the code |
 
 ### Kits
 
-One command per group. A kit runs its group's skills **in order**, and runs only what fits the
-repository **right now**: each step comes out as run, skip (does not apply, and why) or blocked
-(applies, but cannot run yet, and what to do about it).
+One command per group. A kit runs its group's skills **in order**, and only the ones that fit the
+repository **right now**. Each step ends as run, skip (does not apply, and why) or blocked (applies,
+but cannot run yet, and what to do about it).
 
 | Kit | Command | What it runs |
 |---|---|---|
-| [kit-build](skills/kit-build/) | `/build` | handoff and open-loops, fanout when the work is parallel, then only the stack skills the work touches, wire-api when an API and a screen both change, seedbed when the data model changes; each stack's tests gate the next step |
-| [kit-break](skills/kit-break/) | `/break` | **quick** (default): harden the changed areas, bug-sweep the new commits, one triage report · **full**: + load-sim with perf-watch on the local stack · **launch**: + ship-check |
-| [kit-flow](skills/kit-flow/) | `/flow` | end of a session: docsync, feature-map, open-loops, a handoff log row · `/flow start`: read the handoff and the open questions |
-| [kit-feature](skills/kit-feature/) | `/feature` | build, then break (quick), then flow: a feature from request to recorded |
-| [autopilot](skills/autopilot/) | `/shipkit` | say "run shipkit" and nothing else: it reads the repository, decides which kits and skills fit now, runs them, and says what cannot run yet and why |
+| [kit-build](skills/kit-build/) | `/build` | handoff and open-loops, fanout when the work is parallel, then only the stack skills the work touches; each stack's tests gate the next step |
+| [kit-break](skills/kit-break/) | `/break` | **quick** (default): harden the changed areas, bug-sweep the new commits, one triage report · **full**: + load-sim and perf-watch on the local stack · **launch**: + ship-check |
+| [kit-flow](skills/kit-flow/) | `/flow` | End of a session: docsync, feature-map, open-loops, a handoff row · `/flow start`: read the handoff and the open questions |
+| [kit-feature](skills/kit-feature/) | `/feature` | Build, then break (quick), then flow: a feature from request to recorded |
+| [autopilot](skills/autopilot/) | `/shipkit` | Say "run shipkit" and nothing else: it reads the repository, decides what fits now, runs it, and says what cannot run yet and why |
 
 ```mermaid
 flowchart LR
@@ -129,18 +114,10 @@ flowchart LR
     state --> auto
     auto --> now["▶️ Now"]
     auto --> ready["🕐 Ready when you want"]
-    auto --> notnow["⛔ Not now + why"]
-    now --> kits
-    subgraph kits["Kits: each plans its own steps"]
-        direction TB
-        build["/build"]
-        brk["/break"]
-        flow["/flow"]
-        feat["/feature = build → break → flow"]
-    end
+    auto --> notnow["⛔ Not now, and why"]
 ```
 
-How the autopilot decides (the first that fits):
+How the autopilot decides (the first rule that fits):
 
 | The repository or the request says | Now |
 |---|---|
@@ -152,8 +129,8 @@ How the autopilot decides (the first that fits):
 | only docs changed | `/flow` |
 | nothing changed | `/flow start` |
 
-`/break full` is offered only when `load-scenario.toml` points at this machine and the stack
-answers; anywhere else it is held back with the reason. Nothing runs against production.
+`/break full` runs only when `load-scenario.toml` points at this machine and the stack answers.
+Nothing runs against production.
 
 ```bash
 python3 skills/switchboard/scripts/kit.py auto                       # what fits now
@@ -175,84 +152,121 @@ kit: break (full)
                                └ one report from harden, bug-sweep
 ```
 
+## The taste behind it
+
+These are the habits I want from an agent, and the skills are written to enforce them:
+
+- **Test first, then break it.** A change is not done until a failing test has been written for each
+  flaw found, and the fix makes it pass.
+- **Docs are part of the change.** Changelog, spec and tracker move in the same commit, and a
+  checker holds them to it.
+- **Safe to run twice.** Scripts check before they change, offer `--dry-run`, and never delete by default.
+- **Honest exit codes.** Data on stdout, messages on stderr, and a partial failure is a failure.
+- **No one's machine in the code.** No hardcoded user, host, IP or secret. A public repository must
+  work for anyone.
+- **Verify before claiming.** A finding needs evidence, and "done" needs output you have read.
+
 ## How the skills work
 
-- **The agent reads `SKILL.md`.** Claude Code loads skills from `.claude/skills/` (by their
-  description, or by a slash command); Cursor and Codex read `.agents/skills/` through `AGENTS.md`;
-  Trae reads `.trae/skills/`. The instructions are written to be followed literally: what to read
-  first, what to change, what to run, when it is done.
-- **Scripts do the mechanical parts** and are plain Python 3.11+ with no dependencies, so they run
-  with `python3` or `uv run python` in any project. Each takes its paths from `shipkit.toml` and
-  skips checks whose files do not exist.
-- **Skills hand work to each other.** stack-backend ends in docsync; harden records attacks in
-  docsync's attack log and its matrix feeds bug-sweep, load-sim and triage-report; fanout reserves
-  numbers from open-loops' and docsync's registers and lands with docsync's checks.
+- **The agent reads `SKILL.md`.** Claude Code loads skills from `.claude/skills/` (by description or
+  by slash command); Cursor and Codex read `.agents/skills/` through `AGENTS.md`; Trae reads
+  `.trae/skills/`. The instructions are written to be followed literally.
+- **Scripts do the mechanical parts.** Plain Python 3.11+ with no dependencies, so they run with
+  `python3` or `uv run python` in any project. Each reads its paths from `shipkit.toml` and skips
+  checks whose files do not exist.
+- **Skills hand work to each other.** stack-backend ends in docsync; harden's attack log lives in
+  docsync and its matrix feeds bug-sweep, load-sim and triage-report; fanout reserves numbers from
+  open-loops and docsync and lands through docsync's checks.
 - **The switchboard routes.** `@docs` or `/docs` names a skill; otherwise trigger phrases and file
-  paths in `skills/switchboard/skills.toml` pick up to four, and the hook suggests them on each
-  message.
-
-### A feature, end to end
+  paths in `skills/switchboard/skills.toml` pick up to four, and the hook suggests them on each message.
 
 ```mermaid
 flowchart TB
     subgraph plan["1 · Start and build"]
         direction LR
-        start(["💡 a feature"]) --> handoffr["📖 handoff<br/>read where we left off"]
+        start(["💡 a feature"]) --> handoffr["📖 handoff<br/>where we left off"]
         handoffr --> loops1["❓ open-loops<br/>which questions it touches"]
         loops1 --> buildc{"one agent<br/>or several?"}
-        buildc -- one --> stack["🏗️ stack-backend<br/>stack-web · stack-native<br/>stack-cli"]
+        buildc -- one --> stack["🏗️ stack-*"]
         buildc -- several --> fanout["🔀 fanout<br/>worktrees, owned paths"]
         fanout --> stack
     end
     subgraph prove["2 · Prove and record"]
         direction LR
-        wire["🔌 wire-api<br/>screen ↔ endpoint"] --> seed["🌱 seedbed<br/>demo + test data"]
-        seed --> harden["🛡️ harden<br/>test first, then break it"]
-        harden --> docs["📚 docsync<br/>changelog · spec · tracker"]
-        docs --> fmap["🗺️ feature-map<br/>what is built"]
+        wire["🔌 wire-api"] --> seed["🌱 seedbed"]
+        seed --> harden["🛡️ harden"]
+        harden --> docs["📚 docsync"]
+        docs --> fmap["🗺️ feature-map"]
         fmap --> handoffw(["📝 handoff<br/>log the session"])
     end
     plan --> prove
 ```
 
-### How the skills hand off
+## Configure
+
+One file, `shipkit.toml`, at the project root. The installer writes it from what the project is
+(`project.py write`), and `/profile` checks it ([every table, as the multi-tenant SaaS preset](shipkit.example.toml)).
+
+The `[project]` table is the profile every skill runs by. A value set there wins; a value left out
+is detected; nothing undetected is assumed:
+
+| Key | Values |
+|---|---|
+| `kind` | `saas`, `self-hosted`, `app`, `cli`, `library`, `infra`, `container-app` |
+| `tenancy` | `none`, `single-user`, `multi-user`, `multi-tenant` |
+| `money` | `none`, `payments` |
+| `plans` | `none`, `tiers` (priced plans) |
+| `auth` | `none`, `local`, `accounts` |
+| `surfaces` | any of `api`, `web`, `native`, `desktop`, `cli`, `shell`, `container`, `library` |
+| `offline` | `true`, `false` |
+
+So a self-hosted tool never gets billing checks, a library never gets a many-tenant load test, and a
+multi-tenant SaaS with payments gets all of it. Kit steps (`needs` in kits.toml), ship-check items
+(`requires`) and skill sections marked **[money]**, **[multi-tenant]**, **[plans]** or **[self-hosted]**
+apply only when the profile has the trait. `python3 <skills>/switchboard/scripts/project.py show`
+prints the profile.
+
+Three skills take their own files too: `seedbed.toml` (seed modules, scenarios, personas),
+`load-scenario.toml` (traffic) and `ship-check.toml` (the checklist). The first two have an `init`
+command that writes the generic example.
+
+## Learning from real projects
+
+This is the part I care about most. shipkit gets better from the work it is used on. At the end of a
+`/flow` or `/feature` session, the agent checks whether a skill misled it, missed something, or
+produced a lesson other projects could use. If so, it writes a general report on your machine.
 
 ```mermaid
 flowchart LR
-    be["stack-backend"] --> docs["docsync"]
-    web["stack-web"] --> docs
-    rn["stack-native"] --> docs
-    cli["stack-cli"] --> docs
-    wire["wire-api"] -- "tracker status" --> docs
-    harden["harden"] -- "attack log" --> docs
-    harden -- "test matrix" --> sweep["bug-sweep"]
-    harden -- "test matrix" --> load["load-sim"]
-    harden -- "matrix coverage" --> triage["triage-report"]
-    load --> perf["perf-watch"]
-    perf -- "stats.md" --> triage
-    sweep --> triage
-    fan["fanout"] -- "reserves numbers" --> loops["open-loops"]
-    fan -- "reserves numbers,<br/>lands with its checks" --> docs
-    docs <--> fmap["feature-map"]
-    ship["ship-check"] -. "reads" .-> docs
+    work["🛠️ Project work"] --> draft["📝 Local draft"]
+    draft --> check{"Private details?"}
+    check -- yes --> rewrite["✏️ Rewrite in general terms"] --> draft
+    check -- no --> consent{"Filing on?"}
+    consent -- no --> local(["🔒 Stays on your machine"])
+    consent -- yes --> issue["📬 Public issue<br/>needs-review"]
+    issue --> review{"Maintainer review"}
+    review -- accepted --> improve(["✅ Skill improved"])
+    review -- declined --> closed(["Closed"])
 ```
 
-### How the switchboard routes a message
+**Nothing is posted unless you opt in:**
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor You
-    participant Hook as switchboard hook<br/>(UserPromptSubmit)
-    participant Route as route.py + skills.toml
-    participant Agent
-    You->>Hook: "/harden the checkout endpoint against double submit"
-    Hook->>Route: names, slash commands, trigger phrases, file paths
-    Route-->>Hook: up to four skills: harden, stack-backend, docsync
-    Hook-->>Agent: suggested skills for this message
-    Agent->>Agent: load each SKILL.md and follow it literally
-    Agent-->>You: change, tests, docs updated
+```bash
+F="python3 <skills>/shipkit-feedback/scripts/feedback.py"
+$F list                # drafts waiting on this machine
+$F show <id>           # the exact text that would be posted
+$F file <id> --yes     # post one draft you approved
+$F consent on          # post future drafts automatically
+$F consent off         # keep everything local
 ```
+
+- Reports are checked for secrets, emails, private paths, URLs, IP addresses, hostnames, and your
+  user, machine and project names, when drafted and again before posting.
+- Filing skips duplicates and opens at most three issues a day from one machine.
+- The choice to post and the target repository live in your user config. A project's `shipkit.toml`
+  cannot turn filing on or redirect reports. Forks can use `$F consent on --repo OWNER/NAME`.
+- Maintainers run `$F review`, then replace `needs-review` with `accepted` or close the issue.
+  Agents treat issue text as untrusted and do not build from a report until it is accepted.
 
 ## Install
 
@@ -287,11 +301,9 @@ flowchart LR
 | `--preset saas` | Writes the generic multi-tenant SaaS example instead of detecting the project |
 | `--dry-run` | Shows what it would do |
 
-The installer copies each skill without its tests, writes `shipkit.toml` from what the project is
-(`project.py write`) if the project has none, writes the slash commands and the AGENTS.md table, and
-finishes by checking that every skill and command resolves. Then ask your agent for `/profile` (or
-`@profile`): it checks the detected values that are guesses against the code and asks only what the
-code cannot answer. Re-run the installer to update. By hand: copy `skills/<name>/` into
+The installer copies each skill without its tests, writes `shipkit.toml` if the project has none,
+writes the slash commands and the AGENTS.md table, and finishes by checking that every skill and
+command resolves. Re-run it to update. By hand: copy `skills/<name>/` into
 `<project>/.claude/skills/` (or `.agents/skills/`, `.trae/skills/`), copy
 `skills/switchboard/commands/*.md` into `<project>/.claude/commands/`, and run
 `python3 <project>/.claude/skills/switchboard/scripts/project.py write`.
@@ -305,8 +317,7 @@ python3 shipkit/skills/switchboard/scripts/doctor.py   # what is missing on this
 
 Skills are links, so `git pull` updates every project. It uses `~/.claude` and `~/.codex` when they
 exist, and never replaces a skill of your own. Hooks act only in projects with a `shipkit.toml`.
-`--dry-run` shows the changes and `--uninstall` removes them. Linux and macOS are supported, with
-Python 3.11 or newer.
+`--dry-run` shows the changes and `--uninstall` removes them. Linux and macOS are supported.
 
 Requirements: `bash` and Python 3.11+ (`tomllib`). Node, uv or Expo only where the project uses them.
 
@@ -329,84 +340,6 @@ Requirements: `bash` and Python 3.11+ (`tomllib`). Node, uv or Expo only where t
 Every command is `/<short> <what to do>`, for example `/harden the checkout endpoint against double
 submit` or `/break full`. In agents without slash commands, write `@<short>` in the message.
 
-## Configure
-
-One file, `shipkit.toml`, at the project root, written from the project by `project.py write` and
-checked by `/profile` ([every table, as the multi-tenant SaaS preset](shipkit.example.toml)).
-
-The `[project]` table is the profile every skill runs by. A value set there wins; a value left out
-is detected; nothing undetected is assumed:
-
-| Key | Values |
-|---|---|
-| `kind` | `saas`, `self-hosted`, `app`, `cli`, `library`, `infra`, `container-app` |
-| `tenancy` | `none`, `single-user`, `multi-user`, `multi-tenant` |
-| `money` | `none`, `payments` |
-| `plans` | `none`, `tiers` (priced plans) |
-| `auth` | `none`, `local`, `accounts` |
-| `surfaces` | any of `api`, `web`, `native`, `desktop`, `cli`, `shell`, `container`, `library` |
-| `offline` | `true`, `false` |
-
-Kit steps (`needs` in kits.toml), ship-check items (`requires`) and skill sections marked
-**[money]**, **[multi-tenant]**, **[plans]**, **[self-hosted]** apply only when the profile has the
-trait. `python3 <skills>/switchboard/scripts/project.py show` prints the profile;
-`project.py has money` answers yes or no.
-
-Two skills also take their own scenario files: `seedbed.toml` (seed modules, scenarios, personas)
-and `load-scenario.toml` (traffic); both have an `init` command that writes the generic example.
-ship-check takes an optional `ship-check.toml` checklist.
-
-```mermaid
-flowchart LR
-    toml["📄 shipkit.toml"] --> proj["[project]<br/>kind, tenancy, money, plans"]
-    toml --> stack["[stack]<br/>api, web and native dirs"]
-    toml --> docsync["[docsync]<br/>docs, packages, registers"]
-    toml --> hardent["[harden]<br/>matrix + axes"]
-    toml --> loopst["[open_loops]<br/>register"]
-    toml --> more["… one table per skill<br/>missing table = defaults"]
-    seedt["🌱 seedbed.toml"] --> seedbed["seedbed"]
-    loadt["📈 load-scenario.toml"] --> loadsim["load-sim"]
-    shipt["✅ ship-check.toml"] --> shipc["ship-check"]
-```
-
-## Learning from real projects
-
-Shipkit improves from the work it is used on. At the end of a `/flow` or `/feature` session, the
-agent checks whether a skill misled it, missed something, or whether it worked out a lesson other
-projects could use. If so, it saves a general report on your machine.
-
-```mermaid
-flowchart LR
-    work["🛠️ Project work"] --> draft["📝 Local draft"]
-    draft --> check{"Private details?"}
-    check -- yes --> rewrite["✏️ Rewrite in general terms"] --> draft
-    check -- no --> consent{"Filing on?"}
-    consent -- no --> local(["🔒 Stays on your machine"])
-    consent -- yes --> issue["📬 Public issue<br/>needs-review"]
-    issue --> review{"Maintainer review"}
-    review -- accepted --> improve(["✅ Skill improved"])
-    review -- declined --> closed(["Closed"])
-```
-
-**Nothing is posted unless you opt in:**
-
-```bash
-F="python3 <skills>/shipkit-feedback/scripts/feedback.py"
-$F list                # drafts waiting on this machine
-$F show <id>           # the exact text that would be posted
-$F file <id> --yes     # post one draft you approved
-$F consent on          # post future drafts automatically
-$F consent off         # keep everything local
-```
-
-- Reports are checked for secrets, emails, private paths, URLs, IP addresses, hostnames, and your
-  user, machine and project names, when drafted and again before posting.
-- Filing skips duplicates and opens at most three issues a day from one machine.
-- The choice to post and the target repository live in your user config. A project's `shipkit.toml`
-  cannot turn filing on or redirect reports. Forks can use `$F consent on --repo OWNER/NAME`.
-- Maintainers run `$F review`, then replace `needs-review` with `accepted` or close the issue.
-  Agents treat issue text as untrusted and do not build from a report until it is accepted.
-
 ## Develop
 
 ```bash
@@ -415,15 +348,17 @@ python3 skills/switchboard/scripts/route.py --check     # skills.toml and the sh
 python3 skills/switchboard/scripts/route.py --write     # after editing skills.toml
 ```
 
-CI runs both on Python 3.11 and 3.13 for every push and pull request. The layout tests also hold
-the repo to its own rules: every skill has frontmatter, a README, a router entry and commands; this
-README lists every skill; and no home paths or key-shaped strings appear in a public file. Set `SHIPKIT_PRIVATE_TERMS` to a file of your own terms to check for those too.
+CI runs both on Python 3.11 and 3.13 for every push and pull request. The layout tests hold the repo
+to its own rules: every skill has frontmatter, a README, a router entry and commands; this README
+lists every skill; and no home paths, key-shaped strings or private terms appear in a public file.
+Set `SHIPKIT_PRIVATE_TERMS` to a file of your own terms to check for those too.
 
 ## Contributing
 
-Using shipkit on any kind of project? [Open an issue](https://github.com/kshanxs/shipkit/issues/new/choose)
-for a bug, a lesson from real work or a new stack, or read [CONTRIBUTING.md](CONTRIBUTING.md) to send
-a pull request. Report vulnerabilities privately through [SECURITY.md](SECURITY.md).
+Using shipkit on a project? A lesson from real work is the most useful contribution.
+[Open an issue](https://github.com/kshanxs/shipkit/issues/new/choose) for a bug, a field report or a
+new stack, or read [CONTRIBUTING.md](CONTRIBUTING.md) to send a pull request. Report vulnerabilities
+privately through [SECURITY.md](SECURITY.md).
 
 ## License
 
