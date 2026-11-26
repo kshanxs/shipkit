@@ -6,6 +6,7 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 
 ### Added
 
+- docs/: install, configuration, kits and the autopilot, how the skills work (with the hand-off and routing diagrams), slash commands, self-improvement and development, moved out of the root README, which now keeps the pitch, a quick start, the skill and kit tables and a docs index (2026-11-26)
 - stack-cli: a "Running unattended" reference (`references/unattended.md`) for timers that must keep a next run (`OnCalendar=` with `Persistent=true`), ssh connection reuse and backoff on resets, and checking new DNS names against the authoritative server instead of a caching resolver (2026-11-26)
 - docsync: `naming_exempt = [...]` in `[docsync]`, paths (or a folder) the naming rule skips, for owner- or tool-mandated names such as `docs/BRIEF.md`; the rule stays on for every other document (2026-11-26)
 - fanout: `fanout.py leftovers [--hours N] [--json]`, a read-only report of what finished or abandoned runs left behind: `fanout-*` containers whose plan is missing, whose task landed or that are older than N hours (with their Redis key count), and worktrees and branches of landed, abandoned or planless tasks, each with the exact command to clean it up (2026-11-25)
