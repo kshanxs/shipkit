@@ -54,6 +54,13 @@ trap 'rm -rf "$tmp"' EXIT
 Keep the public API small and named. Do not print, exit or change global state from library code.
 State the supported runtime versions. A breaking change needs a major version and a changelog line.
 
+## Running unattended
+
+Timers, cron jobs and scripts that reach other hosts over ssh or look up new DNS names fail silently.
+Read [the unattended rules](references/unattended.md): a timer needs `OnCalendar=` to keep a next run
+(check `systemctl --user list-timers`), ssh connections are reused and backed off on resets, and a new
+name is checked against its authoritative server before anyone resolves it through a cache.
+
 ## Test it
 
 Run tests against a throwaway `HOME`, with stubs at the front of `PATH` for anything that reaches
