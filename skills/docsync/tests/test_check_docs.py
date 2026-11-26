@@ -207,6 +207,19 @@ class Naming(Repo):
         self.assertIn("Beta_Feature.md", problems)
         self.assertIn("gamma-feature.md", problems)
 
+    def test_a_named_path_is_exempt_from_the_naming_rule_only(self) -> None:
+        self.write("shipkit.toml", '[docsync]\nnaming_exempt = ["docs/BRIEF.md"]\n')
+        self.write("docs/BRIEF.md", "# Brief\n")
+        self.write("docs/Other_Brief.md", "# Other\n")
+        problems = "\n".join(self.errors()["naming"])
+        self.assertNotIn("BRIEF.md", problems)
+        self.assertIn("Other_Brief.md", problems)
+
+    def test_an_exempt_folder_keeps_its_name_unchecked(self) -> None:
+        self.write("shipkit.toml", '[docsync]\nnaming_exempt = ["docs/Generated"]\n')
+        self.write("docs/Generated/api.md", "# Api\n")
+        self.assertEqual(self.errors().get("naming", []), [])
+
     def test_keeps_dated_files_in_plans(self) -> None:
         self.write("docs/features/2026-10-06-beta-notes.md", f"# Notes\n\n{STATUS}\n")
         self.assertIn("dated files belong in docs/plans/", "\n".join(self.errors()["naming"]))

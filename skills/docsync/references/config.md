@@ -16,6 +16,7 @@ attack_log = "docs/testing/attack_log.md"
 attack_log_start = ""                               # a date: closed bugs "Found by ... attack" since then need an attack row
 racing_markers = []                                 # names that mark a race test: ["racing_client", "all_read_before_any_writes"]
 naming = "snake"                                    # docs file names: snake | kebab | lower | any
+naming_exempt = []                                  # paths, relative to the repository root, skipped by the naming check: ["docs/BRIEF.md"]
 plans_dir = "docs/plans"                            # dated files (YYYY-MM-DD-title.md) live only here
 plan_sources = []                                   # every spec must be linked from one: ["docs/feature_catalog.md"]
 no_plan = []                                        # specs exempt from that: ["docs/features/admin/*"]

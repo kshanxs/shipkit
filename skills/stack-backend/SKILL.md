@@ -104,6 +104,8 @@ inserts it idempotently (`INSERT ... ON CONFLICT DO NOTHING`).
   sealed under (`SEALED_AS = {"new_type": "old_type"}`), so old and new records seal and verify
   alike. Test it: seal a record under the old value, rename it as the migration does, and assert it
   still verifies; the test must fail without the alias.
+- An embedded database (SQLite in a file the app owns) gets a copy before a migration that touches
+  data: `VACUUM INTO` a backup, then migrate. See `references/node.md` for the Node details.
 
 ## Cache
 
