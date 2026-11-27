@@ -135,6 +135,12 @@ by every website they visit. Test, against the real server:
 | The bind address and port | What the docs say (local only, or the LAN); never every interface by surprise |
 | Secrets and tokens on disk | Readable only by the app's user; never in logs or error pages |
 
+Host-based tests (the local-network rows, and "a request to 127.0.0.1 with no proxy identity header is
+a local, trusted process") send the `Host` header with `node:http` `request()` or `curl -H 'Host: ...'`,
+never with the built-in `fetch` (undici), which ignores a custom `Host` and sends the real one. Before
+trusting such a test, assert that the server saw the intended identity: a 403 for a foreign `Host`,
+not only a status code that a trusted caller could also get.
+
 ## Changes to users' files, and deletes
 
 For a change that rewrites users' files or deletes items, fixtures prove the logic and only real

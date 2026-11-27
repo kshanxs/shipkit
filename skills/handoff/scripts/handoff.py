@@ -191,14 +191,17 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("show")
     p.add_argument("--log", type=int, default=8, help="newest work log rows to show")
     p.set_defaults(func=cmd_show)
+    conf = settings()  # the allowed words come from shipkit.toml, so --help and the parser agree with the checks
     p = sub.add_parser("log", help="add one work log row, newest first")
     p.add_argument("--entry", required=True, help="a short name for the work, not 'Session 3'")
     p.add_argument("--agent", required=True, help="the tool or person: Claude, Cursor, Codex, Manual, ...")
-    p.add_argument("--area", nargs="+", default=["Dev"])
+    p.add_argument("--area", nargs="+", default=["Dev"], choices=conf["areas"], metavar="AREA",
+                   help=f"one or more of: {', '.join(conf['areas'])}")
     p.add_argument("--changed", required=True, help="one to three sentences: what is different now")
     p.add_argument("--links", default="", help="every file, branch or PR touched, with its commit SHA for code")
     p.add_argument("--next", required=True, help="the single next action")
-    p.add_argument("--status", required=True)
+    p.add_argument("--status", required=True, choices=conf["statuses"],
+                   help=f"one of: {', '.join(conf['statuses'])}")
     p.add_argument("--date", help="override the timestamp (YYYY-MM-DDTHH:MM+ZZ:ZZ)")
     p.set_defaults(func=cmd_log)
     sub.add_parser("check").set_defaults(func=cmd_check)

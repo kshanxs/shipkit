@@ -22,6 +22,8 @@ Find the entry points first: `bin/`, `scripts/`, `[project.scripts]`, the `bin` 
 | Least privilege | Run as the user. Ask for root only for the step that needs it, and write user files as that user |
 | Secrets stay out | Not in arguments (`ps` shows them), logs, shell history or the repository. Read them from the environment or a mode-600 file |
 | Writes are atomic | Write a temp file in the same folder, then rename. An interrupted run leaves the old file whole |
+| Preview flags fail closed | A wrapper that forwards arguments passes `--dry-run` and `--print` to the child unchanged. If it cannot tell that they arrived, it refuses to run. Its argument handling (a filter, an argv offset) is tested before the first real call |
+| Develop off the live copy | Never edit or test a tool in the checkout that a live service or timer runs from. Use a worktree |
 
 ## Shell
 
@@ -92,6 +94,15 @@ Run tests against a throwaway `HOME`, with stubs at the front of `PATH` for anyt
 the network or changes the system (`git push`, `apt-get`, `systemctl`, `sudo`, `curl`).
 A script that reads fixed paths (`/sys`, `/proc`, `/usr/sbin/<tool>`) needs a root-prefix override
 (for example `SYSROOT=...`) so tests can point it at fixtures instead.
+
+Stub commands and fixtures print fixed text with `printf '%s\n' '<text>'`, never `echo`. `echo`
+expands backslash escapes under dash (the `/bin/sh` on Debian and Ubuntu) and differs again in BusyBox,
+so a JSON fixture with `\n` in a string breaks only there. A heredoc that holds `$` or backslashes
+quotes its delimiter (`<<'EOF'`).
+
+A wrapper that forwards to a command that changes the system is tested with a stub child that echoes
+its argv. Before the wrapper runs for real even once, the stub must show that `--dry-run` and `--print`
+arrived, and that a flag the wrapper cannot pass on makes it refuse.
 
 | Case | Must hold |
 |---|---|

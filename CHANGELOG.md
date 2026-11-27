@@ -56,6 +56,10 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 
 ### Fixed
 
+- stack-cli: a wrapper that forwards to a system-changing command must pass `--dry-run` and `--print` to the child, fail closed when it cannot, and be tested with a stub child before its first real call; tools a live service runs are developed in a worktree (field report #55, 2026-11-28)
+- stack-cli: stub commands and fixtures print with `printf '%s\n'`, never `echo` (dash expands its escapes); heredocs holding `$` or backslashes quote their delimiter (field report #52, 2026-11-28)
+- harden: host-based tests send the `Host` header with `node:http` or `curl`, never Node's `fetch`, which ignores it; assert the server saw the intended identity first (field report #53, 2026-11-28)
+- handoff: `log --help` lists the allowed `--status` and `--area` words, and a wrong one fails at the parser; work open in a pull request is Waiting on owner (field report #54, 2026-11-28)
 - stack-cli: warns that under `set -e` a false test inside an assignment's command substitution ends the script silently (2026-11-25)
 - doctor.py finds tools in `~/.local/bin` when a non-login shell leaves it off PATH (2026-11-21)
 - profile: Tauri and Electron apps get a `desktop` surface and `kind = app` instead of being called self-hosted servers; a real server in the repository still counts, and bug-sweep has a desktop area (2026-11-22)
