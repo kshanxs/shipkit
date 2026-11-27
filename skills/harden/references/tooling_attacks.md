@@ -13,6 +13,7 @@ the system replaced by a stub. Never run these against a real machine's configur
 | Concurrency | Two runs at once (a timer and a person) | A lock, or a result as if they ran in turn |
 | Existing work | Uncommitted changes, a user's own file where a link must go | Never overwritten; left alone or backed up |
 | Dry run | `--dry-run` on every path | Nothing changes, and no network write |
+| Preview through a wrapper | `--dry-run` and `--print` passed to a wrapper that forwards to a command that changes the system, with a stub child that echoes its argv | The flag reaches the child; a flag the wrapper cannot pass on makes it refuse; the real command never runs |
 | Environment | Empty `HOME`, no `PATH` tools, another username, no terminal, an unusual locale | Works, or stops with a clear message |
 | Platform | An unsupported OS or package manager, an old runtime | A clear message and a non-zero exit |
 | Privilege | Run as root and as a user | User files stay owned by the user; nothing world-writable |

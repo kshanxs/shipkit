@@ -83,7 +83,7 @@ stops it) still gets a row with Status In progress and the exact next step, if y
 | What changed | One to three plain sentences: what is different now, not what you tried |
 | Links | Every file, branch or pull request touched, with its commit SHA for code |
 | Next step | The single next action, specific enough to start without reading the chat |
-| Status | From `statuses`: Done, In progress, Blocked, Waiting on owner |
+| Status | From `statuses`: Done, In progress, Blocked, Waiting on owner. `log --help` lists the words. Work open in a pull request, waiting for review or a decision, is Waiting on owner, not Done |
 
 One row per session; a long session with two separate pieces of work may add two. Never edit or
 delete another session's row.

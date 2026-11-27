@@ -51,6 +51,17 @@ class Handoff(unittest.TestCase):
         self.assertNotEqual(self.log("Bad", "Finished").returncode, 0)
         self.assertNotEqual(self.log("Bad", "Done", "--area", "Marketing").returncode, 0)
 
+    def test_help_lists_the_words_a_status_and_area_may_use(self) -> None:
+        help_text = self.run_script("log", "--help").stdout
+        for word in ("Done", "In progress", "Blocked", "Waiting on owner", "Dev", "Docs", "Research", "Ops", "Launch", "Other"):
+            self.assertIn(word, help_text)
+
+    def test_a_wrong_status_fails_at_the_parser_and_names_the_words(self) -> None:
+        self.run_script("init")
+        result = self.log("Bad", "In review")
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn("Waiting on owner", result.stderr)
+
     def test_configured_file_owner_and_words(self) -> None:
         (self.root / "shipkit.toml").write_text('[handoff]\nfile = "docs/HANDOFF.md"\nowner = "Sam"\nstatuses = ["Done", "Paused"]\ntimezone = "UTC"\n')
         (self.root / "docs").mkdir()
