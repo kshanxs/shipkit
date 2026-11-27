@@ -53,7 +53,13 @@ trap 'rm -rf "$tmp"' EXIT
 
 - A systemd user unit runs with a minimal `PATH` that usually lacks `~/.local/bin`: set
   `Environment=PATH=...` in the unit when the service calls tools installed there, or a status page
-  silently shows "none found" instead of failing.
+  silently shows "none found" instead of failing. That line replaces systemd's default `PATH`, so
+  write the full standard list after the extra folders (`/usr/local/sbin:/usr/local/bin:/usr/sbin:
+  /usr/bin:/sbin:/bin`), or tools in sbin (`iw`, `ip`, `ethtool`) go missing. Build it from one
+  shared value for every unit the installer writes, and test the rendered unit.
+- A script a service, cron or ssh command may run must not assume an interactive `PATH`: look in
+  `/usr/local/sbin`, `/usr/sbin` and `/sbin` too (append them when missing) before reporting a tool
+  as not installed.
 - User units stop at logout unless lingering is on (`loginctl show-user $USER -p Linger`); check it
   and tell the user the one command that turns it on, rather than running sudo for them.
 - A reverse proxy in front of a local service (for example `tailscale serve`) makes every request
@@ -84,6 +90,8 @@ name is checked against its authoritative server before anyone resolves it throu
 
 Run tests against a throwaway `HOME`, with stubs at the front of `PATH` for anything that reaches
 the network or changes the system (`git push`, `apt-get`, `systemctl`, `sudo`, `curl`).
+A script that reads fixed paths (`/sys`, `/proc`, `/usr/sbin/<tool>`) needs a root-prefix override
+(for example `SYSROOT=...`) so tests can point it at fixtures instead.
 
 | Case | Must hold |
 |---|---|
@@ -94,6 +102,7 @@ the network or changes the system (`git push`, `apt-get`, `systemctl`, `sudo`, `
 | Missing tool, unsupported OS | A clear message and a non-zero exit |
 | Failure halfway | Non-zero exit, nothing half-written, and a re-run recovers |
 | `--json` | `json.loads(stdout)` succeeds on every path, including errors and skipped items |
+| Minimal `PATH` (`env -i HOME=$HOME PATH=/usr/bin:/bin`) | Same results as from a login shell: the way a service, cron or ssh runs it |
 
 Checks, when the tools are present (say which were not):
 

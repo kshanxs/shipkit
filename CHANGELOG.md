@@ -6,6 +6,7 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 
 ### Added
 
+- stack-cli: an explicit `Environment=PATH=` replaces systemd's default, so keep the sbin and bin folders after the extras, from one shared value; scripts a service, cron or ssh runs look in the sbin folders before saying a tool is missing; a minimal-`PATH` test case and a root-prefix override for scripts that read `/sys` or fixed tool paths (2026-11-27)
 - docs/: install, configuration, kits and the autopilot, how the skills work (with the hand-off and routing diagrams), slash commands, self-improvement and development, moved out of the root README, which now keeps the pitch, a quick start, the skill and kit tables and a docs index (2026-11-26)
 - stack-cli: a "Running unattended" reference (`references/unattended.md`) for timers that must keep a next run (`OnCalendar=` with `Persistent=true`), ssh connection reuse and backoff on resets, and checking new DNS names against the authoritative server instead of a caching resolver (2026-11-26)
 - docsync: `naming_exempt = [...]` in `[docsync]`, paths (or a folder) the naming rule skips, for owner- or tool-mandated names such as `docs/BRIEF.md`; the rule stays on for every other document (2026-11-26)
