@@ -51,7 +51,7 @@ PATTERNS = [
     ("a private key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY")),
     ("a signed token", re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}")),
     ("a secret value", re.compile(r"(?i)\b(pass(word|wd)?|secret|token|api[_-]?key)\b[\"']?\s*[=:]\s*[\"']?[^\s\"']{8,}")),
-    ("an email address", re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")),
+    ("an email address", re.compile(r"\b[\w.+-]+@(?!(?:[\w-]+\.)*example\.(?:com|org|net)\b)[\w-]+\.[\w.-]+\b")),
     ("a home path", re.compile(r"(?:/home|/Users|/root)/[^\s/]+|[A-Za-z]:\\Users\\[^\s\\]+")),
     ("a URL", re.compile(r"(?i)\b(?:https?|ssh|git)://(?!(?:localhost|127\.0\.0\.1|example\.(?:com|org|net))(?:[:/\s]|$))\S+")),
     ("an IP address", re.compile(r"\b(?!127\.0\.0\.1\b)(?!0\.0\.0\.0\b)(?:\d{1,3}\.){3}\d{1,3}\b")),

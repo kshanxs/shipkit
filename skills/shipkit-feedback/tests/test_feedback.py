@@ -91,6 +91,12 @@ class Privacy(Base):
         text = "Use max-height, 127.0.0.1, http://localhost:5173 and `@types/node` in a test."
         self.assertEqual(feedback.problems(text, ["acmecorp"]), [])
 
+    def test_placeholder_emails_on_reserved_domains_pass(self) -> None:
+        for text in ("name@example.com", "name-12345@example.com.json", "x@mail.example.org"):
+            self.assertEqual(feedback.problems(text, []), [], text)
+        for text in ("ana@realmail.io", "ana@shop.test"):
+            self.assertEqual(feedback.problems(text, []), ["an email address"], text)
+
     def test_mentions_cannot_notify_anyone(self) -> None:
         self.assertEqual(feedback.quiet_mentions("ask @someone now"), "ask `@someone` now")
 
