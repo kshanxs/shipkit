@@ -26,7 +26,11 @@ GOOD = ["--skill", "harden", "--title", "Race overlapping scheduled jobs", "--ha
 class Base(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp())
-        env = {"XDG_STATE_HOME": str(self.tmp / "state"), "XDG_CONFIG_HOME": str(self.tmp / "config")}
+        other = self.tmp / "other-skills"
+        for name in ("polish-pack", "harden"):
+            (other / name).mkdir(parents=True)
+            (other / name / "SKILL.md").write_text("---\nname: x\n---\n")
+        env = {"XDG_STATE_HOME": str(self.tmp / "state"), "XDG_CONFIG_HOME": str(self.tmp / "config"), "SHIPKIT_SKILL_DIRS": str(other)}
         self.patches = [mock.patch.dict(os.environ, env), mock.patch.object(feedback, "project_terms", return_value=["acmecorp"])]
         for patch in self.patches:
             patch.start()
@@ -93,7 +97,37 @@ class Privacy(Base):
     def test_an_unknown_skill_is_refused(self) -> None:
         code, out = self.cli("draft", "--skill", "../secrets", "--title", "T", "--happened", "H", "--lesson", "L")
         self.assertEqual(code, 2)
-        self.assertIn("not an installed skill", out)
+        self.assertIn("not a shipkit skill", out)
+
+
+class OutsideSkills(Base):
+    def test_a_report_naming_another_packs_skill_is_refused(self) -> None:
+        code, out = self.cli("draft", *GOOD[:-1], "Claim the row first; also add it to polish-pack's checklist.")
+        self.assertEqual(code, 2)
+        self.assertIn("a skill outside shipkit (polish-pack)", out)
+        self.assertEqual(feedback.all_drafts(), [])
+
+    def test_a_shipkit_skill_installed_elsewhere_too_is_not_outside(self) -> None:
+        self.assertNotIn("harden", feedback.outside_skills())
+        self.draft("--change", "Add a step to harden and bug-sweep.")
+
+    def test_the_subject_must_be_a_shipkit_skill(self) -> None:
+        argv = ["draft", "--skill", "polish-pack", *GOOD[2:]]
+        code, out = self.cli(*argv)
+        self.assertEqual(code, 2)
+        self.assertIn("not a shipkit skill", out)
+
+    def test_check_passes_clean_text_and_refuses_the_rest(self) -> None:
+        body = self.tmp / "body.md"
+        body.write_text("stack-web: long paths spill out of cards. Add min-w-0.\n")
+        self.assertEqual(self.cli("check", "--file", str(body))[0], 0)
+        home = "/" + "home/someone/app"
+        body.write_text(f"See polish-pack and acmecorp at {home}.\n")
+        code, out = self.cli("check", "--file", str(body))
+        self.assertEqual(code, 2)
+        for part in ("polish-pack", "a private name", "a home path"):
+            self.assertIn(part, out)
+        self.assertNotIn("acmecorp", out)
 
 
 class Filing(Base):

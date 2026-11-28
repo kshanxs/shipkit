@@ -16,9 +16,29 @@ done. Publish nothing unless the user asked for it or their standing instruction
 - Did you repeat a generic mistake, or work out a technique a skill should teach?
 - Is there no skill for a kind of work that will come up again?
 
-If none, say `Shipkit: nothing to improve` and stop. Otherwise write the lesson in **generic** terms:
-no project or client names, private paths, hostnames, secrets or business details. Project-specific
-values belong in that project's `shipkit.toml`.
+If none, say `Shipkit: nothing to improve` and stop. Otherwise write the lesson by the rules below.
+
+### The rules for every report (issue, pull request or draft)
+
+1. **Shipkit's skills only.** Name, change or hand work to only the skills listed in
+   `skills/switchboard/skills.toml`. Other skill packs installed beside shipkit (method packs,
+   design, slide or document skills, a user's private skills) are not part of shipkit: never
+   propose a change to one, list one as a place for the fix, or name one as a step. If the lesson
+   belongs to such a skill, it goes to that skill's own project or nowhere. If shipkit should
+   teach it, propose it for a shipkit skill in shipkit's own words.
+2. **Generic.** No project or client names, private paths, hostnames, machine names, accounts,
+   secrets or business details. Use placeholders (`/srv/app/data/file.json`, `name@example.com`).
+   Project-specific values belong in that project's `shipkit.toml`.
+3. **Useful elsewhere.** Say the symptom someone else would see, the cause, the rule, and the kinds
+   of project it applies to (and where it does not).
+4. **Checked before posting.** Run the text through the checker; it refuses secrets, personal
+   details, project names and names of skills outside shipkit:
+
+   ```bash
+   python3 "$SK/shipkit-feedback/scripts/feedback.py" check --file body.md   # or pipe it on stdin
+   ```
+
+   Fix what it reports and run it again. Never post text it refused.
 
 ## 2. Find the shipkit repository
 
@@ -57,15 +77,18 @@ cd "$W"
    `python3 skills/switchboard/scripts/route.py --write`.
 3. Add a dated line under `## [Unreleased]` in `CHANGELOG.md`.
 4. Run `uv run pytest` and `python3 skills/switchboard/scripts/route.py --check`.
-5. Commit, push and open the PR with **Field report**, **Lesson**, **Change** and **Checks run**.
+5. Run the PR body through `$F check` (the rules above). Commit, push and open the PR with **Field report**, **Lesson**, **Change** and **Checks run**.
    Without write access to `R`, `gh pr create` offers to use your fork.
 6. Do not merge unless the user says so. After the merge, run `git -C "$S" worktree remove "$W"`.
 
 ## 4b. Bigger or unclear: issue
 
 ```bash
-gh issue create -R "$R" --title "<skill>: <the gap>" --body "<field report, lesson, proposed change>"
+$F check --file body.md      # $F as in 4c; must print "Clean"
+gh issue create -R "$R" --title "<skill>: <the gap>" --body-file body.md
 ```
+
+The title starts with a shipkit skill's name.
 
 Add `--label field-report` when the repository has that label.
 

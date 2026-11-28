@@ -9,6 +9,8 @@ body:
         Field reports are how shipkit learns from every kind of software project. Describe the lesson so that it helps someone working on a different product.
 
         This tracker is public. Leave out project and client names, private paths, hostnames, secrets and business details.
+
+        Report only on shipkit's own skills. A lesson for a skill from another pack goes to that pack's project.
   - type: input
     id: skill
     attributes:
@@ -61,4 +63,6 @@ body:
       label: Public check
       options:
         - label: This report contains no secrets, private paths, hostnames, or client or project names.
+          required: true
+        - label: It names and proposes changes only to shipkit's own skills, not to skills from other packs installed beside it.
           required: true

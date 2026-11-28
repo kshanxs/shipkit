@@ -96,6 +96,11 @@ checkout's code), and, if `redis = true`, a Redis of its own in Docker. Test dat
 after the worktree folder so two worktrees never drop each other's tables, and shorten every one,
 scratch databases included, to the database's limit with the worker kept last (stack-backend).
 
+A linked `node_modules` also breaks a Vite dev server in the worktree: the link resolves outside
+the worktree root, so Vite answers 403 for assets such as fonts ("outside of Vite serving allow
+list") and browser checks fail on errors the change did not cause. Install instead; if a link must
+stay, add its real path to `server.fs.allow` (stack-web).
+
 If a project does link dependencies into a worktree, ignore them without a trailing slash (`.venv`,
 `node_modules`) or list them in the worktree's `.git/info/exclude` first: `.venv/` matches only a
 folder, so `git add -A` commits the link, and pulling it replaces the real folder with a link to

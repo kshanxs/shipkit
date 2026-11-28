@@ -17,7 +17,9 @@ security vulnerabilities privately, as described in [SECURITY.md](SECURITY.md).
 ## Keep it public and generic
 
 Issues and pull requests are public. Leave out secrets, private paths, hostnames, and client or
-project names.
+project names. Report only on shipkit's own skills (the ones in `skills/switchboard/skills.toml`):
+a lesson for a skill from another pack goes to that pack's project. Before posting, run
+`python3 skills/shipkit-feedback/scripts/feedback.py check --file body.md`.
 
 A skill must work for someone else's project:
 

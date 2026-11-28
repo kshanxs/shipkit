@@ -105,7 +105,8 @@ inserts it idempotently (`INSERT ... ON CONFLICT DO NOTHING`).
   alike. Test it: seal a record under the old value, rename it as the migration does, and assert it
   still verifies; the test must fail without the alias.
 - An embedded database (SQLite in a file the app owns) gets a copy before a migration that touches
-  data: `VACUUM INTO` a backup, then migrate. See `references/node.md` for the Node details.
+  data: `VACUUM INTO` a backup, then migrate. See `references/node.md` for the Node details,
+  including why a synchronous subprocess or file read must never run on a request path.
 
 ## Cache
 

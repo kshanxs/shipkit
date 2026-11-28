@@ -14,6 +14,19 @@ The same rules as SKILL.md, for an API in Node (Express, Fastify or NestJS) with
 | Tests | `uv run pytest` | `vitest run` or `node --test`; a database per worker (`VITEST_POOL_ID`) |
 | Lint | `uv run ruff check` | `eslint .` or `oxlint`, and `tsc --noEmit` |
 
+## Nothing blocking on a request path
+
+Node runs every request on one event loop, so one blocking call makes every request wait behind
+it: each button in the app feels seconds slow, not only the one that calls it. Never call
+`spawnSync`, `execSync`, `execFileSync`, `readFileSync` on a large file or any other synchronous
+I/O in a route, a middleware or code they call.
+
+- Slow outside state (a CLI that probes other machines, a remote status, a big file) is read in
+  the background: async `execFile` or `spawn`, one run in flight at a time, a TTL, warmed at
+  start-up. The route serves the last answer and its age.
+- Check: time the main read endpoint, the one every action re-fetches. Over about 200 ms, profile
+  it with `node --cpu-prof` and look for self time in synchronous calls.
+
 Run Python tooling for scripts in a mixed repository through uv (`uv run python scripts/x.py`),
 so the scripts get the project's pinned interpreter and dependencies.
 

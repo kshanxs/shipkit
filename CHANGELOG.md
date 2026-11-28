@@ -6,6 +6,7 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 
 ### Added
 
+- shipkit-feedback: rules for every report (shipkit's own skills only, generic, useful elsewhere, checked before posting), and `feedback.py check [--file]` for issue and pull request text written by hand; drafts and checks refuse names of skills from other packs installed beside shipkit, and `--skill` must be a shipkit skill. The field report form and CONTRIBUTING.md say the same (2026-11-28)
 - stack-cli: an explicit `Environment=PATH=` replaces systemd's default, so keep the sbin and bin folders after the extras, from one shared value; scripts a service, cron or ssh runs look in the sbin folders before saying a tool is missing; a minimal-`PATH` test case and a root-prefix override for scripts that read `/sys` or fixed tool paths (2026-11-27)
 - docs/: install, configuration, kits and the autopilot, how the skills work (with the hand-off and routing diagrams), slash commands, self-improvement and development, moved out of the root README, which now keeps the pitch, a quick start, the skill and kit tables and a docs index (2026-11-26)
 - stack-cli: a "Running unattended" reference (`references/unattended.md`) for timers that must keep a next run (`OnCalendar=` with `Persistent=true`), ssh connection reuse and backoff on resets, and checking new DNS names against the authoritative server instead of a caching resolver (2026-11-26)
@@ -56,6 +57,10 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 
 ### Fixed
 
+- stack-web: long unbroken outside text (paths, emails, errors) in flex and grid children gets `min-width: 0` and `overflow-wrap: anywhere`, with a per-box spill check and a stress pass; seedbed: one long unbroken value per outside-text field in seeds and mocks; bug-sweep lists the spill (field report #60, 2026-11-28)
+- stack-web and stack-native: focus effects never depend on callback props (`useEffectEvent` or a ref), with a browser check on a polling page (field report #59, 2026-11-28)
+- fanout and stack-web: a `node_modules` linked into a worktree makes Vite answer 403 for assets; install instead, or allow the real path (field report #58, 2026-11-28)
+- stack-backend (Node): no synchronous subprocess or file read on a request path; slow outside state is refreshed in the background with a TTL, and the main read endpoint is timed. stack-web: buttons show a returned promise as pending (never `void`), tap feedback, and phone widths of 360 and 390 px with every page reachable (field report #57, 2026-11-28)
 - stack-cli: a wrapper that forwards to a system-changing command must pass `--dry-run` and `--print` to the child, fail closed when it cannot, and be tested with a stub child before its first real call; tools a live service runs are developed in a worktree (field report #55, 2026-11-28)
 - stack-cli: stub commands and fixtures print with `printf '%s\n'`, never `echo` (dash expands its escapes); heredocs holding `$` or backslashes quote their delimiter (field report #52, 2026-11-28)
 - harden: host-based tests send the `Host` header with `node:http` or `curl`, never Node's `fetch`, which ignores it; assert the server saw the intended identity first (field report #53, 2026-11-28)
