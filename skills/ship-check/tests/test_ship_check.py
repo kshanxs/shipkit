@@ -160,7 +160,7 @@ class Profiles(ShipCheck):
         for absent in ("Billing operations", "Choosing a plan and paying", "Tenant isolation", "## 4. Pricing", "Sign-up and email verification"):
             self.assertNotIn(f"| {absent}", text.replace("## 4. Pricing", "| ## 4. Pricing"))
         self.assertNotIn("## 4. Pricing", text)
-        for present in ("DNS rebinding refused", "Cross-site requests refused", "Install and first run", "Data safety for self-hosted users"):
+        for present in ("DNS rebinding refused", "Cross-site requests refused", "Install and first run", "Data safety for self-hosted users", "Responses compressed by the server itself"):
             self.assertIn(present, text)
         self.assertIn("Left out, not in this project's profile:", text)
         self.assertIn("Billing operations (refunds, credits, plan changes) (needs money)", text)
@@ -170,6 +170,7 @@ class Profiles(ShipCheck):
         for present in ("Billing operations", "Tenant isolation", "## 4. Pricing", "Sign-up and email verification"):
             self.assertIn(present, text)
         self.assertNotIn("| DNS rebinding refused", text)
+        self.assertNotIn("Responses compressed by the server itself", text)
         self.assertNotIn("### Releases and distribution", text)
 
     def test_a_library_gets_releases_not_operations(self) -> None:

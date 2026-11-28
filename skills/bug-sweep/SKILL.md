@@ -131,7 +131,9 @@ attack log, and the two matrices.
 - **Robustness and scale:** unbounded lists, N+1 (perf-watch), 500s from an unvalidated enum or
   `None`, migrations unsafe for big tables.
 - **Front end:** token storage, role-gated UI the API does not enforce, cached data or a queued
-  change surviving a sign-out and reaching another account.
+  change surviving a sign-out and reaching another account; long unbroken text (paths, emails,
+  errors) spilling out of a card because a flex or grid child lacks `min-width: 0` (stack-web);
+  a focus effect keyed on a callback prop that re-runs on every render.
 
 ## D. Verify before reporting (kill false positives)
 

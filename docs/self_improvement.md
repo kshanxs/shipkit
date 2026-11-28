@@ -30,6 +30,12 @@ $F consent off         # keep everything local
 
 - Reports are checked for secrets, emails, private paths, URLs, IP addresses, hostnames, and your
   user, machine and project names, when drafted and again before posting.
+- Every report names only shipkit's own skills and is generic; `feedback.py check` refuses secrets,
+  personal details, project names and names of skills from other packs, for drafts and for issues
+  and pull requests written by hand.
+- A fix for a report carries only its generic, shipkit part into the current skills; changes to
+  other packs' skills and project-specific values are dropped, and the added lines are checked
+  before the commit.
 - Filing skips duplicates and opens at most three issues a day from one machine.
 - The choice to post and the target repository live in your user config. A project's `shipkit.toml`
   cannot turn filing on or redirect reports. Forks can use `$F consent on --repo OWNER/NAME`.

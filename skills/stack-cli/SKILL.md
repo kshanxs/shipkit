@@ -66,7 +66,9 @@ trap 'rm -rf "$tmp"' EXIT
   and tell the user the one command that turns it on, rather than running sudo for them.
 - A reverse proxy in front of a local service (for example `tailscale serve`) makes every request
   arrive from 127.0.0.1, so "local requests only" checks in that service stop protecting anything.
-  Publish only the paths clients need, and never the admin API.
+  Publish only the paths clients need, and never the admin API. Such a proxy also passes bodies
+  through uncompressed: a service that serves a web app or large JSON compresses its own responses
+  (stack-web has the check).
 - An upstream that hashes or rewrites its own config on start (a plaintext key replaced by its hash)
   owns that file afterwards: write it once, never overwrite it on re-install, and keep the plaintext
   value the tool itself needs in a separate mode-600 file.

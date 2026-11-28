@@ -9,11 +9,13 @@
     feedback.py file <id> --yes          post one draft the user has just approved
     feedback.py consent on|off|status [--repo OWNER/NAME]
     feedback.py review [--repo OWNER/NAME]   issues waiting for the maintainer's review
+    feedback.py check [--file PATH]      check an issue or PR text written by hand (stdin by default)
 
 Nothing is posted unless this user turned filing on, or passed --yes. That choice and the target
 repository live in the user's own config, never in a project's shipkit.toml: a repository someone
 else wrote must not be able to publish your notes or redirect them. Every draft is checked for
-secrets, personal details and project names when it is written and again before it is posted.
+secrets, personal details, project names and names of skills from other packs installed beside
+shipkit (a report is about shipkit's own skills) when it is written and again before it is posted.
 Standard library only.
 """
 
@@ -49,7 +51,7 @@ PATTERNS = [
     ("a private key", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY")),
     ("a signed token", re.compile(r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}")),
     ("a secret value", re.compile(r"(?i)\b(pass(word|wd)?|secret|token|api[_-]?key)\b[\"']?\s*[=:]\s*[\"']?[^\s\"']{8,}")),
-    ("an email address", re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")),
+    ("an email address", re.compile(r"\b[\w.+-]+@(?!(?:[\w-]+\.)*example\.(?:com|org|net)\b)[\w-]+\.[\w.-]+\b")),
     ("a home path", re.compile(r"(?:/home|/Users|/root)/[^\s/]+|[A-Za-z]:\\Users\\[^\s\\]+")),
     ("a URL", re.compile(r"(?i)\b(?:https?|ssh|git)://(?!(?:localhost|127\.0\.0\.1|example\.(?:com|org|net))(?:[:/\s]|$))\S+")),
     ("an IP address", re.compile(r"\b(?!127\.0\.0\.1\b)(?!0\.0\.0\.0\b)(?:\d{1,3}\.){3}\d{1,3}\b")),
@@ -140,12 +142,47 @@ def project_terms() -> list[str]:
     return sorted(t for t in terms if len(t) >= 4 and t.lower() not in GENERIC)
 
 
-def problems(text: str, terms: list[str]) -> list[str]:
-    """What must come out of the text. Matched values are not repeated, so they never reach a log."""
+def shipkit_skills() -> set[str]:
+    """Shipkit's own skills: the tables of switchboard/skills.toml, else the folders beside this one."""
+    listing = SKILLS / "switchboard" / "skills.toml"
+    if listing.is_file():
+        return set(re.findall(r"(?m)^\[([a-z0-9][a-z0-9-]*)\]\s*$", listing.read_text(encoding="utf-8")))
+    return {path.parent.name for path in SKILLS.glob("*/SKILL.md")}
+
+
+def skill_folders() -> list[Path]:
+    """Where agents install skills. SHIPKIT_SKILL_DIRS (os.pathsep-separated) replaces the list."""
+    if "SHIPKIT_SKILL_DIRS" in os.environ:
+        return [Path(p) for p in os.environ["SHIPKIT_SKILL_DIRS"].split(os.pathsep) if p]
+    home = Path.home()
+    folders = [SKILLS, home / ".claude" / "skills", home / ".agents" / "skills", home / ".codex" / "skills", Path.cwd() / ".claude" / "skills"]
+    for variable in ("CLAUDE_CONFIG_DIR", "CODEX_HOME"):
+        if os.environ.get(variable):
+            folders.append(Path(os.environ[variable]) / "skills")
+    return folders
+
+
+def outside_skills() -> list[str]:
+    """Installed skills that are not shipkit's: a report must not name them."""
+    own = shipkit_skills()
+    found: set[str] = set()
+    for folder in skill_folders():
+        try:
+            found |= {path.parent.name for path in folder.glob("*/SKILL.md")}
+        except OSError:
+            continue
+    return sorted(n for n in found - own if len(n) >= 4 and n.lower() not in GENERIC)
+
+
+def problems(text: str, terms: list[str], outside: list[str] | None = None) -> list[str]:
+    """What must come out of the text. Matched private values are not repeated, so they never reach a log."""
     found = [label for label, pattern in PATTERNS if pattern.search(text)]
     for index, term in enumerate(terms):
         if re.search(rf"(?<![\w-]){re.escape(term)}(?![\w-])", text, re.I):
             found.append(f"a private name (term {index + 1}, starting {term[0]!r})")
+    named = [n for n in (outside or []) if re.search(rf"(?<![\w-]){re.escape(n)}(?![\w-])", text, re.I)]
+    if named:
+        found.append(f"a skill outside shipkit ({', '.join(named)}); report on shipkit's own skills only, or reword a plain word")
     return found
 
 
@@ -213,7 +250,7 @@ def all_drafts() -> list[dict]:
 
 def check_draft(draft: dict) -> None:
     text = "\n".join([issue_title(draft), issue_body(draft)])
-    found = problems(text, sorted({*project_terms(), *draft.get("terms", [])}))
+    found = problems(text, sorted({*project_terms(), *draft.get("terms", [])}), outside_skills())
     if found:
         raise Refused(f"draft {draft['id']} contains {', '.join(found)}. Rewrite it in generic terms.")
 
@@ -255,8 +292,8 @@ def filed_today(state: dict, now: float) -> list[float]:
 
 
 def cmd_draft(args: argparse.Namespace) -> int:
-    if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", args.skill) or not (args.skill == "new-skill" or (SKILLS / args.skill / "SKILL.md").exists()):
-        raise Refused(f"{args.skill!r} is not an installed skill; use `new-skill` for a skill that does not exist yet")
+    if args.skill != "new-skill" and args.skill not in shipkit_skills():
+        raise Refused(f"{args.skill!r} is not a shipkit skill; report on shipkit's own skills, or use `new-skill` for one that does not exist yet")
     for label, value in (("title", args.title), ("happened", args.happened), ("lesson", args.lesson), ("change", args.change or "")):
         limit = 120 if label == "title" else FIELD_LIMIT
         if len(value) > limit:
@@ -371,6 +408,18 @@ def cmd_review(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_check(args: argparse.Namespace) -> int:
+    try:
+        text = Path(args.file).read_text(encoding="utf-8") if args.file else sys.stdin.read()
+    except OSError as error:
+        raise Refused(f"cannot read {args.file}: {error.strerror}") from error
+    found = problems(text, project_terms(), outside_skills())
+    if found:
+        raise Refused(f"the text contains {', '.join(found)}. Rewrite it in generic terms.")
+    print("Clean: no secrets, private details, project names or skills outside shipkit.")
+    return 0
+
+
 def parser() -> argparse.ArgumentParser:
     top = argparse.ArgumentParser(description="Draft and file skill learnings for review.")
     sub = top.add_subparsers(dest="command", required=True)
@@ -399,6 +448,9 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--dry-run", action="store_true")
     p.add_argument("--repo")
     p.set_defaults(func=cmd_file)
+    p = sub.add_parser("check", help="check issue or PR text written by hand")
+    p.add_argument("--file", help="the text to check (default: stdin)")
+    p.set_defaults(func=cmd_check)
     p = sub.add_parser("review", help="issues waiting for the maintainer")
     p.add_argument("--repo")
     p.set_defaults(func=cmd_review)

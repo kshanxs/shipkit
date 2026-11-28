@@ -53,6 +53,9 @@ API returned; it never grants one.
   with stable keys.
 - Column names are the API's (`snake_case`), the TypeScript key their camelCase form; enums are
   the API's strings; nullability matches the API's schema; dates and money as the API sends them.
+- An effect that moves focus (a modal focusing its first field) never lists a callback prop such
+  as `onClose` as a dependency: a parent re-rendering on polled data re-runs it and steals focus.
+  Read the callback through `useEffectEvent` or a ref.
 - On sign-out the device database is deleted; the device holds only what a role needs offline.
 - App-side endpoints (Expo API Routes) are thin adapters only: never business rules, never the
   database, never a permission decision.

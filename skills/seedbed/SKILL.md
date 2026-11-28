@@ -47,6 +47,10 @@ python3 $SK/seedbed/scripts/check_seeds.py --init     # copies references/seedbe
 - Data with rules behind it (anything a service validates) is made by calling the service or the
   API as a persona, so it is what the app itself would produce.
 - People are made up, on the reserved `.test` domain. Never copy a real person.
+- Each field that shows text from outside the app (a file path, an email used as a name, a URL, a
+  token, a provider's error message) gets at least one long, unbroken, realistic value in the seed
+  and in the mocks, so a layout that cannot wrap it shows in the demo. Short tidy values
+  (`file-1.json`) hide that bug.
 - If logins changed, regenerate any generated credentials document; never edit it by hand.
 
 ### 2. The catalogue

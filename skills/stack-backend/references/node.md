@@ -14,6 +14,33 @@ The same rules as SKILL.md, for an API in Node (Express, Fastify or NestJS) with
 | Tests | `uv run pytest` | `vitest run` or `node --test`; a database per worker (`VITEST_POOL_ID`) |
 | Lint | `uv run ruff check` | `eslint .` or `oxlint`, and `tsc --noEmit` |
 
+## Nothing blocking on a request path
+
+Node runs every request on one event loop, so one blocking call makes every request wait behind
+it: each button in the app feels seconds slow, not only the one that calls it. Never call
+`spawnSync`, `execSync`, `execFileSync`, `readFileSync` on a large file or any other synchronous
+I/O in a route, a middleware or code they call.
+
+- Slow outside state (a CLI that probes other machines, a remote status, a big file) is read in
+  the background: async `execFile` or `spawn`, one run in flight at a time, a TTL, warmed at
+  start-up. The route serves the last answer and its age.
+- Check: time the main read endpoint, the one every action re-fetches. Over about 200 ms, profile
+  it with `node --cpu-prof` and look for self time in synchronous calls.
+
+## Compressing what the server sends
+
+A Node server that serves its own built front end and JSON, with no web server in front, must set
+`Content-Encoding` itself; a tunnel or serve command in front does not compress (stack-web has the
+check).
+
+- Read `Accept-Encoding`: brotli first, gzip as the fallback, honour `q=0`, and always send
+  `Vary: Accept-Encoding`. Skip bodies under about 1 KB and formats already compressed (images,
+  fonts in `woff2`).
+- Built assets: compress each file once at a high level and cache the result by path and mtime,
+  warmed at start-up. Use the async `zlib.brotliCompress`: brotli at quality 11 on the main thread
+  blocks every request (see above).
+- API bodies: compress per request at a fast level (brotli quality 4 to 5, or gzip 6).
+
 Run Python tooling for scripts in a mixed repository through uv (`uv run python scripts/x.py`),
 so the scripts get the project's pinned interpreter and dependencies.
 

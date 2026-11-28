@@ -66,12 +66,52 @@ other; shared code goes in a package, and a boundary check in CI holds it.
 - Forms: one schema (zod) with a form library (React Hook Form); no hand-rolled form state.
 - Sign-in: the identity provider owns the session; a store may read the user, never decide it.
 
+## Buttons, dialogs and focus
+
+- A shared `Button` takes `onClick: () => unknown` and, when the handler returns a promise, shows
+  a pending state (disabled, a spinner) until it settles. Pass the action straight through
+  (`onClick={save}` or `onClick={() => save(id)}`); never `onClick={() => void save()}`, which
+  throws the promise away so the button cannot show that anything is happening.
+- Give buttons and tappable rows `touch-action: manipulation` and an `:active` style, so a tap
+  shows at once on a phone.
+- An effect that moves focus (a dialog or focus trap saving the focused element, focusing the
+  first field, giving focus back on cleanup) must not list callback props (`onClose`) as
+  dependencies. Callers pass a new arrow on every render, so the effect re-runs on each render:
+  on a page that polls, open dropdowns close by themselves and typing jumps to another field.
+  Read the callback through `useEffectEvent` (React 19.2+) or a ref updated in an effect, so the
+  effect runs once each time the dialog opens. The same holds in React Native.
+- When a report says "typing gets interrupted", "I can't type" or "a dropdown closes by itself",
+  look first for focus effects that re-run on each render, before blaming keyboard shortcuts.
+  Check it in a browser: open the dialog on a page that polls, focus a select, wait through two
+  polls and check that `document.activeElement` has not changed; type, wait, type again and check
+  that the field holds both halves.
+
+## Long text from outside the app
+
+Text the app did not write has no break points: file paths, emails used as names
+(`name-12345@example.com.json`), URLs, tokens, IDs, provider and machine error messages, stack
+traces. In a flex or grid item the default `min-width: auto` makes the item at least as wide as its
+longest word, so such a value spills out of its card; `overflow-wrap: break-word` alone does not
+fix a flex child.
+
+- Base styles: `overflow-wrap: break-word` on `body`, so every block of text breaks long words.
+- Every flex or grid child that shows outside text gets `min-width: 0` and
+  `overflow-wrap: anywhere` (Tailwind v4: `min-w-0 wrap-anywhere`). Unlike `break-word`,
+  `anywhere` lowers the element's min-content width, so the item can shrink. Use `truncate` with a
+  `title` only where the full value is not needed.
+- When a spill is reported on one screen, search every screen for flex and grid children that
+  render such fields without `min-w-0`.
+- Mocks and seeds hold one long, unbroken, realistic value for each field that shows outside text
+  (seedbed); tidy short mock strings hide this bug.
+
 ## Accessibility
 
 - Set `type` on every button in a form. Keep native attributes, refs, labels (`htmlFor`/`id`) and
   keyboard focus.
 - Decorative elements get `aria-hidden="true"`; icon-only buttons get an `aria-label`.
-- Check keyboard focus, a phone-width viewport and dark mode for every changed screen.
+- Check keyboard focus, a phone-width viewport and dark mode for every changed screen. At 360 and
+  390 px wide, no page is wider than the screen, and every page and tab is reachable without a
+  hamburger menu (a bottom tab bar with a "More" sheet works well).
 - A global reduced-motion rule (`* { animation-duration: 0.01ms !important }`) fits one-shot
   transitions but makes an `infinite` animation (a pulse, a spinner, a flowing SVG dash) run
   thousands of cycles a second, which flickers. Give looping animations a class and set
@@ -107,6 +147,50 @@ installs many more). Use a browser build that is already in the Playwright cache
 `executablePath` (from an environment variable, never a hard-coded path) rather than downloading
 another. Measure layout after CSS transitions finish, and select the exact element under test (give a
 decorative SVG a data attribute): an icon's `<svg>` matches a bare `svg` selector.
+
+**Overflow checks at each width.** Comparing `document.documentElement.scrollWidth` with
+`clientWidth` misses a child spilling out of its card when an ancestor clips it or a grid track
+absorbs it. Also check each bordered box, at every width you test:
+
+```js
+// Run with page.evaluate(auditSpill) in Playwright; expect an empty list.
+function auditSpill() {
+  return [...document.querySelectorAll("body *")].filter((el) => {
+    const s = getComputedStyle(el);
+    const bordered = parseFloat(s.borderLeftWidth) > 0 || parseFloat(s.borderRightWidth) > 0;
+    return bordered && s.overflowX === "visible" && el.scrollWidth > el.clientWidth + 1;
+  }).map((el) => `${el.tagName.toLowerCase()}.${[...el.classList].join(".")}`);
+}
+```
+
+For a wider sweep, append a long unbroken token (`/srv/app/data/subfolder/a-long-file-name.json`)
+to each text leaf and run the check again; it finds every place that would spill. Expect noise
+from short fixed labels (counts, times, badges) and keep the places that can hold outside text.
+
+**Compression on a server that serves the app itself.** When the project's own server sends the
+built front end and its JSON, with no web server (nginx, Caddy) in front, nothing compresses them
+unless the server does: tunnels and serve commands (`tailscale serve`, `cloudflared`, `ssh -L`)
+pass bodies through. On localhost that looks instant; over a relayed or mobile link a megabyte of
+script and a large poll every few seconds make the app feel stuck while the API answers in
+milliseconds. Check the largest asset and the busiest API route, with and without compression:
+
+```bash
+curl -s -H 'Accept-Encoding: br, gzip' -o /dev/null -w '%{size_download}\n' "$URL"
+curl -s -o /dev/null -w '%{size_download}\n' "$URL"
+```
+
+The first must be much smaller (and the response must carry `Content-Encoding` and
+`Vary: Accept-Encoding`). Judge load time in a throttled browser (Chrome DevTools Protocol
+`Network.emulateNetworkConditions` at about 1.5 Mbit/s and 150 ms), not on localhost. How to
+compress in a Node server: stack-backend, `references/node.md`.
+
+**Vite returns 403 for assets in a worktree.** A `node_modules` symlinked into a worktree resolves
+to a real path outside the worktree root, and Vite's dev server refuses to serve files from it
+("outside of Vite serving allow list"), such as font files. Browser checks then fail on console
+errors that have nothing to do with the change. Install dependencies in the worktree from the lock
+file instead (fanout); if it must stay a link, add the real `node_modules` path to
+`server.fs.allow`. When a browser check fails only on 403s for assets, read the Vite log for that
+message before debugging the change.
 
 ## Finishing a change
 
