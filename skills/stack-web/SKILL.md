@@ -167,6 +167,23 @@ For a wider sweep, append a long unbroken token (`/srv/app/data/subfolder/a-long
 to each text leaf and run the check again; it finds every place that would spill. Expect noise
 from short fixed labels (counts, times, badges) and keep the places that can hold outside text.
 
+**Compression on a server that serves the app itself.** When the project's own server sends the
+built front end and its JSON, with no web server (nginx, Caddy) in front, nothing compresses them
+unless the server does: tunnels and serve commands (`tailscale serve`, `cloudflared`, `ssh -L`)
+pass bodies through. On localhost that looks instant; over a relayed or mobile link a megabyte of
+script and a large poll every few seconds make the app feel stuck while the API answers in
+milliseconds. Check the largest asset and the busiest API route, with and without compression:
+
+```bash
+curl -s -H 'Accept-Encoding: br, gzip' -o /dev/null -w '%{size_download}\n' "$URL"
+curl -s -o /dev/null -w '%{size_download}\n' "$URL"
+```
+
+The first must be much smaller (and the response must carry `Content-Encoding` and
+`Vary: Accept-Encoding`). Judge load time in a throttled browser (Chrome DevTools Protocol
+`Network.emulateNetworkConditions` at about 1.5 Mbit/s and 150 ms), not on localhost. How to
+compress in a Node server: stack-backend, `references/node.md`.
+
 **Vite returns 403 for assets in a worktree.** A `node_modules` symlinked into a worktree resolves
 to a real path outside the worktree root, and Vite's dev server refuses to serve files from it
 ("outside of Vite serving allow list"), such as font files. Browser checks then fail on console

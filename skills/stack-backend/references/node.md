@@ -27,6 +27,20 @@ I/O in a route, a middleware or code they call.
 - Check: time the main read endpoint, the one every action re-fetches. Over about 200 ms, profile
   it with `node --cpu-prof` and look for self time in synchronous calls.
 
+## Compressing what the server sends
+
+A Node server that serves its own built front end and JSON, with no web server in front, must set
+`Content-Encoding` itself; a tunnel or serve command in front does not compress (stack-web has the
+check).
+
+- Read `Accept-Encoding`: brotli first, gzip as the fallback, honour `q=0`, and always send
+  `Vary: Accept-Encoding`. Skip bodies under about 1 KB and formats already compressed (images,
+  fonts in `woff2`).
+- Built assets: compress each file once at a high level and cache the result by path and mtime,
+  warmed at start-up. Use the async `zlib.brotliCompress`: brotli at quality 11 on the main thread
+  blocks every request (see above).
+- API bodies: compress per request at a fast level (brotli quality 4 to 5, or gzip 6).
+
 Run Python tooling for scripts in a mixed repository through uv (`uv run python scripts/x.py`),
 so the scripts get the project's pinned interpreter and dependencies.
 

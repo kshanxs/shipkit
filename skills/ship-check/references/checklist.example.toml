@@ -140,6 +140,12 @@ hints = ["docs/**/backup*.md", "docs/**/disaster*.md", "infra/**"]
 requires = ["hosted"]
 
 [[checklist]]
+group = "Serving for self-hosted users"
+items = ["Responses compressed by the server itself (brotli or gzip, `Vary: Accept-Encoding`) when no web server sits in front; checked over a slow link, not only on localhost"]
+hints = ["**/server*", "**/static*", "**/compress*", "Caddyfile", "nginx*.conf"]
+requires = ["self-hosted"]
+
+[[checklist]]
 group = "Data safety for self-hosted users"
 items = ["Where data lives is documented (mounted folders, paths)", "Backup and restore documented for the user", "A failed upgrade can roll back"]
 hints = ["README.md", "docs/**/*.md", "docker-compose*.yml", "compose*.yml", "umbrel-app.yml"]

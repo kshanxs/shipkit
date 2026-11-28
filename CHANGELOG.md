@@ -57,6 +57,7 @@ All notable changes to shipkit. Format: [Keep a Changelog](https://keepachangelo
 
 ### Fixed
 
+- stack-web, stack-backend (Node), stack-cli and ship-check: a self-hosted server that serves its own front end and JSON compresses its responses itself (brotli, gzip fallback, `q=0`, `Vary`; assets once and cached by mtime, API bodies at a fast level), since tunnels and serve commands pass bodies through; a curl size check and a throttled-browser measurement; a ship-check item for self-hosted projects (field report #61, 2026-11-28)
 - stack-web: long unbroken outside text (paths, emails, errors) in flex and grid children gets `min-width: 0` and `overflow-wrap: anywhere`, with a per-box spill check and a stress pass; seedbed: one long unbroken value per outside-text field in seeds and mocks; bug-sweep lists the spill (field report #60, 2026-11-28)
 - stack-web and stack-native: focus effects never depend on callback props (`useEffectEvent` or a ref), with a browser check on a polling page (field report #59, 2026-11-28)
 - fanout and stack-web: a `node_modules` linked into a worktree makes Vite answer 403 for assets; install instead, or allow the real path (field report #58, 2026-11-28)
